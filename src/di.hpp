@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <numeric>
 
 std::vector<std::vector<double>> read_hi_c_data(std::string filename, std::size_t bin_size, std::size_t bin1_min, std::size_t bin1_max, std::size_t bin2_min, std::size_t bin2_max) {
     std::fstream file;
@@ -18,7 +19,6 @@ std::vector<std::vector<double>> read_hi_c_data(std::string filename, std::size_
     }
     
     std::size_t edge_size = std::max((bin1_max - bin1_min), (bin2_max - bin2_min)) / bin_size + 1;
-    std::cout << "Edge size: " << edge_size << std::endl;
     
     std::vector<std::vector<double>> data(edge_size, std::vector<double>(edge_size, 0));
     std::string line;
@@ -55,4 +55,38 @@ std::vector<std::vector<double>> read_hi_c_data(std::string filename, std::size_
         }
     }
     return data;
+}
+
+std::vector<double> calculate_di(std::vector<std::vector<double>> contact_matrix, std::size_t bin_size) {
+    std::size_t n = contact_matrix.size();
+    std::size_t range = 2000000 / bin_size;
+    std::vector<double> di(n, 0);
+
+    for (std::size_t locus_index = 0; locus_index < n; locus_index++) {
+        double A;
+        double B;
+        if (locus_index < range) {
+            A = std::accumulate(contact_matrix[locus_index].begin(), contact_matrix[locus_index].begin() + locus_index, 0.0);
+            B = std::accumulate(contact_matrix[locus_index].begin() + locus_index + 1, contact_matrix[locus_index].begin() + locus_index + range + 1, 0.0);
+        } else if (locus_index >= n - range) {
+            A = std::accumulate(contact_matrix[locus_index].begin() + locus_index - range, contact_matrix[locus_index].begin() + locus_index, 0.0);
+            B = std::accumulate(contact_matrix[locus_index].begin() + locus_index + 1, contact_matrix[locus_index].end(), 0.0);
+        } else {
+            A = std::accumulate(contact_matrix[locus_index].begin() + locus_index - range, contact_matrix[locus_index].begin() + locus_index, 0.0);
+            B = std::accumulate(contact_matrix[locus_index].begin() + locus_index + 1, contact_matrix[locus_index].begin() + locus_index + range + 1, 0.0);
+        }
+
+        double E = (A + B) / 2;
+
+        if (A == 0 && B == 0) {
+            di[locus_index] = 0;
+        } else {
+            try {
+                di[locus_index] = ((B - A) / (std::abs(B - A))) * ((((A - E) * (A - E)) / E) + (((B - E) * (B - E)) / E));
+            } catch (std::exception& e) {
+                di[locus_index] = 0;
+            }
+        }
+    }
+    return di;
 }
