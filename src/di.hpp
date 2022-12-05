@@ -34,7 +34,7 @@ std::vector<HiC> read_hi_c_data(std::string filename) {
 
         ss >> chr >> bin1 >> bin2 >> rescaled_intensity >> diag_offset >> dist;
 
-        hic_data.push_back({chr, bin1, bin2, rescaled_intensity, diag_offset, dist});
+        hic_data.push_back({bin1, bin2, rescaled_intensity, diag_offset, dist});
     }
     return hic_data;
 }

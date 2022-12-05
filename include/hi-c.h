@@ -1,7 +1,6 @@
 #include <iostream>
 
 struct HiC {
-    std::string chr;
     int bin1;
     int bin2;
     double rescaled_intensity;

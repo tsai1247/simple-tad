@@ -10,7 +10,7 @@ int main() {
 
     // print head 10 rows
     for (int i = 0; i < std::min((int) data.size(), 10); i++) {
-        std::cout << data[i].chr << " " << data[i].bin1 << " " << data[i].bin2
+        std::cout << data[i].bin1 << " " << data[i].bin2
                   << " " << data[i].rescaled_intensity << " " << data[i].diag_offset
                   << " " << data[i].dist << std::endl;
     }
