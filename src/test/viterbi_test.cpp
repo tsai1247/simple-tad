@@ -1,5 +1,31 @@
 #include "../lib/viterbi.hpp"
 
+double emission_probability(double emit_value, BiasState state)
+{
+    auto sigma = 25, mu = 0;
+    if(state == UpstreamBias)
+    {
+        mu = 50;
+    }
+    else if(state == DownstreamBias)
+    {
+        mu = -50;
+    }
+    else if(state == NoBias)
+    {
+        mu = 0;
+    }
+    else 
+    {
+        throw runtime_error("Error: impossible state");
+    }
+    double pow_sigma2_2times = 2 * pow(sigma, 2);
+    double pow_delta_emitvalue = - pow((emit_value - mu), 2);
+
+    double ret = 1.0 / (sigma * sqrt(2*PI)) * exp( pow_delta_emitvalue  / pow_sigma2_2times );
+    return ret;
+}
+
 int main()
 {
     vector<double> observation = {50, 12, -3, -20, 1, 5, -18};
