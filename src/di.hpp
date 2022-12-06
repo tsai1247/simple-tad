@@ -8,7 +8,7 @@
 #include <vector>
 #include "constants.h"
 
-std::vector<std::vector<double>> read_hi_c_data(const std::string& filename, const std::size_t& bin_size, const std::size_t& bin1_min, const std::size_t& bin1_max, const std::size_t& bin2_min, const std::size_t& bin2_max) {
+const std::tuple<double*, std::size_t> read_hi_c_data(const std::string& filename, const std::size_t& bin_size, const std::size_t& bin1_min, const std::size_t& bin1_max, const std::size_t& bin2_min, const std::size_t& bin2_max) {
     std::fstream file;
     file.open(filename, std::ios::in);
 
@@ -20,7 +20,7 @@ std::vector<std::vector<double>> read_hi_c_data(const std::string& filename, con
 
     std::size_t edge_size = std::max((bin1_max - bin1_min), (bin2_max - bin2_min)) / bin_size + 1;
 
-    std::vector<std::vector<double>> data(edge_size, std::vector<double>(edge_size, 0));
+    double* data = new double[edge_size * edge_size];
     std::string line;
 
     // skip header
@@ -49,31 +49,33 @@ std::vector<std::vector<double>> read_hi_c_data(const std::string& filename, con
         if (bin1 >= bin1_min && bin1 <= bin1_max && bin2 >= bin2_min && bin2 <= bin2_max) {
             std::size_t row = (bin1 - bin1_min) / bin_size;
             std::size_t col = (bin2 - bin2_min) / bin_size;
-            data[row][col] = rescaled_intensity;
+            data[row * edge_size + col] = rescaled_intensity;
         } else {
             std::cout << "chr: " << chr << " bin1: " << bin1 << " bin2: " << bin2 << " rescaled_intensity: " << rescaled_intensity << " diag_offset: " << diag_offset << " dist: " << dist << std::endl;
         }
     }
-    return data;
+    return std::make_tuple(data, edge_size);
 }
 
-std::vector<double> calculate_di(const std::vector<std::vector<double>>& contact_matrix, const std::size_t& bin_size) {
-    std::size_t n = contact_matrix.size();
+std::vector<double> calculate_di(const double* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
     std::size_t range = SIGNIFICANT_BINS / bin_size;
-    std::vector<double> di(n, 0);
+    std::vector<double> di(edge_size, 0);
 
-    for (std::size_t locus_index = 0; locus_index < n; locus_index++) {
+    for (std::size_t locus_index = 0; locus_index < edge_size; locus_index++) {
         double A;
         double B;
         if (locus_index < range) {
-            A = std::accumulate(contact_matrix[locus_index].begin(), contact_matrix[locus_index].begin() + locus_index, 0.0);
-            B = std::accumulate(contact_matrix[locus_index].begin() + locus_index + 1, contact_matrix[locus_index].begin() + locus_index + range + 1, 0.0);
-        } else if (locus_index >= n - range) {
-            A = std::accumulate(contact_matrix[locus_index].begin() + locus_index - range, contact_matrix[locus_index].begin() + locus_index, 0.0);
-            B = std::accumulate(contact_matrix[locus_index].begin() + locus_index + 1, contact_matrix[locus_index].end(), 0.0);
+            // edge case
+            A = std::accumulate(contact_matrix + locus_index * edge_size, contact_matrix + locus_index * edge_size + locus_index, 0.0);
+            B = std::accumulate(contact_matrix + locus_index * edge_size + locus_index + 1, contact_matrix + locus_index * edge_size + locus_index + range + 1, 0.0);
+        } else if (locus_index >= edge_size - range) {
+            // edge case
+            A = std::accumulate(contact_matrix + locus_index * edge_size + locus_index - range, contact_matrix + locus_index * edge_size + locus_index, 0.0);
+            B = std::accumulate(contact_matrix + locus_index * edge_size + locus_index + 1, contact_matrix + (locus_index + 1) * edge_size, 0.0);
         } else {
-            A = std::accumulate(contact_matrix[locus_index].begin() + locus_index - range, contact_matrix[locus_index].begin() + locus_index, 0.0);
-            B = std::accumulate(contact_matrix[locus_index].begin() + locus_index + 1, contact_matrix[locus_index].begin() + locus_index + range + 1, 0.0);
+            // normal case
+            A = std::accumulate(contact_matrix + locus_index * edge_size + locus_index - range, contact_matrix + locus_index * edge_size + locus_index, 0.0);
+            B = std::accumulate(contact_matrix + locus_index * edge_size + locus_index + 1, contact_matrix + locus_index * edge_size + locus_index + range + 1, 0.0);
         }
 
         double E = (A + B) / 2;

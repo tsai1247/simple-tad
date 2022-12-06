@@ -1,5 +1,5 @@
 CXX = g++
-CXX_FLAGS = -Wall -O3 --std=c++11
+CXX_FLAGS = -Wall -O3 --std=c++17
 TARGET = main
 INCLUDES = -I./src -I./include
 HPPS = ./src/*.hpp
