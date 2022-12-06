@@ -8,7 +8,7 @@
 #include <vector>
 #include "constants.h"
 
-std::vector<std::vector<double>> read_hi_c_data(std::string filename, std::size_t bin_size, std::size_t bin1_min, std::size_t bin1_max, std::size_t bin2_min, std::size_t bin2_max) {
+std::vector<std::vector<double>> read_hi_c_data(const std::string& filename, const std::size_t& bin_size, const std::size_t& bin1_min, const std::size_t& bin1_max, const std::size_t& bin2_min, const std::size_t& bin2_max) {
     std::fstream file;
     file.open(filename, std::ios::in);
 
@@ -57,7 +57,7 @@ std::vector<std::vector<double>> read_hi_c_data(std::string filename, std::size_
     return data;
 }
 
-std::vector<double> calculate_di(std::vector<std::vector<double>> contact_matrix, std::size_t bin_size) {
+std::vector<double> calculate_di(const std::vector<std::vector<double>>& contact_matrix, const std::size_t& bin_size) {
     std::size_t n = contact_matrix.size();
     std::size_t range = SIGNIFICANT_BINS / bin_size;
     std::vector<double> di(n, 0);
