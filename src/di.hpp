@@ -2,11 +2,11 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <numeric>
+#include "constants.h"
 
 std::vector<std::vector<double>> read_hi_c_data(std::string filename, std::size_t bin_size, std::size_t bin1_min, std::size_t bin1_max, std::size_t bin2_min, std::size_t bin2_max) {
     std::fstream file;
@@ -17,9 +17,9 @@ std::vector<std::vector<double>> read_hi_c_data(std::string filename, std::size_
         std::cout << "Error opening file: " << filename << std::endl;
         exit(EXIT_FAILURE);
     }
-    
+
     std::size_t edge_size = std::max((bin1_max - bin1_min), (bin2_max - bin2_min)) / bin_size + 1;
-    
+
     std::vector<std::vector<double>> data(edge_size, std::vector<double>(edge_size, 0));
     std::string line;
 
@@ -59,7 +59,7 @@ std::vector<std::vector<double>> read_hi_c_data(std::string filename, std::size_
 
 std::vector<double> calculate_di(std::vector<std::vector<double>> contact_matrix, std::size_t bin_size) {
     std::size_t n = contact_matrix.size();
-    std::size_t range = 2000000 / bin_size;
+    std::size_t range = SIGNIFICANT_BINS / bin_size;
     std::vector<double> di(n, 0);
 
     for (std::size_t locus_index = 0; locus_index < n; locus_index++) {

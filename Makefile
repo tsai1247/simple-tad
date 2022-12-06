@@ -1,7 +1,7 @@
 CXX = g++
 CXX_FLAGS = -Wall -O3 --std=c++11
 TARGET = main
-INCLUDES = -I./src
+INCLUDES = -I./src -I./include
 HPPS = ./src/*.hpp
 
 .PHONY: all run clean debug
