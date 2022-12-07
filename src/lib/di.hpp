@@ -1,6 +1,7 @@
 #include "constants.h"
 #include <algorithm>
 #include <fstream>
+#include <immintrin.h>
 #include <iostream>
 #include <map>
 #include <numeric>
@@ -57,6 +58,31 @@ const std::tuple<double*, std::size_t> read_hi_c_data(const std::string& filenam
     return std::make_tuple(data, edge_size);
 }
 
+double accumulate_SIMD(const double* data, std::size_t size) {
+    double sum = 0;
+
+    std::size_t remain = size % 4;
+    size -= remain;
+
+    __m256d sum_vec = _mm256_setzero_pd();
+    __m256d data_vec;
+
+    for (std::size_t i = 0; i < size; i += 4) {
+        data_vec = _mm256_loadu_pd(data + i);
+        sum_vec = _mm256_add_pd(sum_vec, data_vec);
+    }
+    sum_vec = _mm256_hadd_pd(sum_vec, sum_vec);
+    sum_vec = _mm256_permute4x64_pd(sum_vec, 0b11011000);
+    sum_vec = _mm256_hadd_pd(sum_vec, sum_vec);
+    _mm256_storeu_pd(&sum, sum_vec);
+
+    for (std::size_t i = size; i < size + remain; i++) {
+        sum += data[i];
+    }
+
+    return sum;
+}
+
 std::vector<double> calculate_di(const double* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
     std::size_t range = SIGNIFICANT_BINS / bin_size;
     std::vector<double> di(edge_size, 0);
@@ -66,16 +92,16 @@ std::vector<double> calculate_di(const double* contact_matrix, const std::size_t
         double B;
         if (locus_index < range) {
             // edge case
-            A = std::accumulate(contact_matrix + locus_index * edge_size, contact_matrix + locus_index * edge_size + locus_index, 0.0);
-            B = std::accumulate(contact_matrix + locus_index * edge_size + locus_index + 1, contact_matrix + locus_index * edge_size + locus_index + range + 1, 0.0);
+            A = accumulate_SIMD(contact_matrix + locus_index * edge_size, locus_index);
+            B = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index + 1, range);
         } else if (locus_index >= edge_size - range) {
             // edge case
-            A = std::accumulate(contact_matrix + locus_index * edge_size + locus_index - range, contact_matrix + locus_index * edge_size + locus_index, 0.0);
-            B = std::accumulate(contact_matrix + locus_index * edge_size + locus_index + 1, contact_matrix + (locus_index + 1) * edge_size, 0.0);
+            A = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index - range, range);
+            B = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index + 1, edge_size - locus_index - 1);
         } else {
             // normal case
-            A = std::accumulate(contact_matrix + locus_index * edge_size + locus_index - range, contact_matrix + locus_index * edge_size + locus_index, 0.0);
-            B = std::accumulate(contact_matrix + locus_index * edge_size + locus_index + 1, contact_matrix + locus_index * edge_size + locus_index + range + 1, 0.0);
+            A = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index - range, range);
+            B = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index + 1, range);
         }
 
         double E = (A + B) / 2;
