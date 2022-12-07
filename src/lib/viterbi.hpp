@@ -26,7 +26,7 @@ vector<BiasState> viterbi(vector<double> observation, vector<BiasState> states, 
     }
 
     // Run Viterbi when t > 0
-    for (auto t = 1; t < observation.size(); t++) {
+    for (std::size_t t = 1; t < observation.size(); t++) {
         V.push_back(map<BiasState, double>());
         map<BiasState, vector<BiasState>> newpath;
 
