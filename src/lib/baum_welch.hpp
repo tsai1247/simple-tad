@@ -1,8 +1,8 @@
-#include <iostream>
-#include <vector>
-#include <numeric>
-#include <cmath>
 #include <cassert>
+#include <cmath>
+#include <iostream>
+#include <numeric>
+#include <vector>
 
 // Use (void) to silence unused warnings.
 #define assertm(exp, msg) assert(((void)msg, exp))
@@ -19,30 +19,29 @@
  *  Complexity:
  *      O(T*N*N) ~= O(T)
  */
-std::vector<std::vector<double>> 
+std::vector<std::vector<double>>
 forward(const std::vector<std::vector<double>>& A,
-        const std::vector<std::vector<double>>& B,
-        const std::vector<double>& pi,
-        const std::vector<int>& O)
-{
-    auto N = A.size(); // get the number of hidden states.
-    auto T = O.size(); // get the length of observed sequence.
+    const std::vector<std::vector<double>>& B,
+    const std::vector<double>& pi,
+    const std::vector<int>& O) {
+    std::size_t N = A.size(); // get the number of hidden states.
+    std::size_t T = O.size(); // get the length of observed sequence.
 
     // init alpha (forward probabilities).
     std::vector<std::vector<double>> alpha(T, std::vector<double>(N));
 
     // calc the initial forward probabilities.
-    for (int i = 0; i < N; i++)
+    for (std::size_t i = 0; i < N; i++)
         alpha[0][i] = pi[i] * B[i][O[0]];
-    
+
     // Calc the forward probabilities for each step.
     // Similar to viterbi but sum up all probabilities.
-    for (int t = 1; t < T; t++) {            // Now is observation t (t is from 1 because we skip init observation).
-        for (int j = 0; j < N; j++) {        // Current is state j.
-            double sum = 0.0;                   // Sum of all probabilities to state j in t 
-            for (int i = 0; i < N; i++)      // From state i.
-                sum += alpha[t-1][i] * A[i][j]; // Translate from state i to state j.
-            alpha[t][j] = sum * B[j][O[t]];     // B[j][O[t]] means the probability of emit O[t] in state j.
+    for (std::size_t t = 1; t < T; t++) { // Now is observation t (t is from 1 because we skip init observation).
+        for (std::size_t j = 0; j < N; j++) { // Current is state j.
+            double sum = 0.0; // Sum of all probabilities to state j in t
+            for (std::size_t i = 0; i < N; i++) // From state i.
+                sum += alpha[t - 1][i] * A[i][j]; // Translate from state i to state j.
+            alpha[t][j] = sum * B[j][O[t]]; // B[j][O[t]] means the probability of emit O[t] in state j.
         }
     }
     return alpha;
@@ -59,28 +58,27 @@ forward(const std::vector<std::vector<double>>& A,
  * Complexity:
  *      O(T*N*N) ~= O(T)
  */
-std::vector<std::vector<double>> 
-backward(   const std::vector<std::vector<double>>& A,
-            const std::vector<std::vector<double>>& B,
-            const std::vector<int>& O)
-{
-    auto N = A.size(); // get the number of hidden states.
-    auto T = O.size(); // get the length of observed sequence.
+std::vector<std::vector<double>>
+backward(const std::vector<std::vector<double>>& A,
+    const std::vector<std::vector<double>>& B,
+    const std::vector<int>& O) {
+    std::size_t N = A.size(); // get the number of hidden states.
+    std::size_t T = O.size(); // get the length of observed sequence.
 
     // Init the backward probabilities.
     std::vector<std::vector<double>> beta(T, std::vector<double>(N));
 
     // Calc the initial backward probabilities
-    for (int i = 0; i < N; i++)
+    for (std::size_t i = 0; i < N; i++)
         beta[T - 1][i] = 1.0;
 
     // Calc the backward probabilities for each step.
-    for (int t = T - 2; t >= 0; t--) {   // Now is observation t (t is from T - 2 because we already init last observation).
-        for (int i = 0; i < N; i++) {    // From state i.
-            double sum = 0.0;               // Sum of all probabilities to state j in t
-            for (int j = 0; j < N; j++)  // Current is state j.
+    for (std::size_t t = T - 2; t >= 0; t--) { // Now is observation t (t is from T - 2 because we already init last observation).
+        for (std::size_t i = 0; i < N; i++) { // From state i.
+            double sum = 0.0; // Sum of all probabilities to state j in t
+            for (std::size_t j = 0; j < N; j++) // Current is state j.
                 sum += A[i][j] * B[j][O[t + 1]] * beta[t + 1][j]; // beta[t + 1][j] means likelihood from j state rear step.
-            beta[t][i] = sum;   // Likelihood from i state to j state in t step.
+            beta[t][i] = sum; // Likelihood from i state to j state in t step.
         }
     }
     return beta;
@@ -99,14 +97,12 @@ backward(   const std::vector<std::vector<double>>& A,
  *  Outputs:
  *      void
  */
-void 
-baum_welch( std::vector<std::vector<double>>& A,
-            std::vector<std::vector<double>>& B,
-            std::vector<double>& pi,
-            const std::vector<int>& O,
-            double tolerance = 1e-5,
-            int maxIterations = 1000)
-{
+void baum_welch(std::vector<std::vector<double>>& A,
+    std::vector<std::vector<double>>& B,
+    std::vector<double>& pi,
+    const std::vector<int>& O,
+    double tolerance = 1e-5,
+    int maxIterations = 1000) {
     const auto M = B.size(); // get the number of emission.
     const auto N = A.size(); // get the number of hidden states.
     const auto T = O.size(); // get the length of observed sequence.
@@ -118,80 +114,79 @@ baum_welch( std::vector<std::vector<double>>& A,
     int iter = 0;
     while (true) {
         // Calc the forward and backward probabilities.
-        auto alpha  = forward(A, B, pi, O);
-        auto beta   = backward(A, B, O);
+        auto alpha = forward(A, B, pi, O);
+        auto beta = backward(A, B, O);
 
         // Calc the likelihood of the observed data.
         // Use beta[0] will get same result.
         double newLikelihood = std::accumulate(alpha[T - 1].begin(), alpha[T - 1].end(), 0.0);
 
         // Check if converge.
-        if (std::abs(newLikelihood - likelihood) < tolerance) break;
+        if (std::abs(newLikelihood - likelihood) < tolerance)
+            break;
         likelihood = newLikelihood;
 
         // Check if reach maxIterations.
-        if (iter >= maxIterations) break;
+        if (iter >= maxIterations)
+            break;
         iter++;
 
         /*  Calculate gamma and xi
          *      gamma[t][i]: In t (idx of observed sequence T) the sum of probability of passing state i.
          *      xi[t][i][j]: In t (idx of observed sequence T) the sum of probability of path from i (idx=t) to j (idx=t+1, obmit here).
-         */ 
+         */
         std::vector<std::vector<double>> gamma(T, std::vector<double>(N));
         std::vector<std::vector<std::vector<double>>> xi(T, std::vector<std::vector<double>>(N, std::vector<double>(N)));
-        for (int t = 0; t < T; t++) {
+        for (std::size_t t = 0; t < T; t++) {
 
             double denominator_g = 0.0, denominator_x = 0.0;
-            for (int i = 0; i < N; i++) {
+            for (std::size_t i = 0; i < N; i++) {
                 denominator_g += alpha[t][i] * beta[t][i];
-                if (t < T-1) {  // Need to consider t+1
-                    for (int j = 0; j < N; j++)
-                        denominator_x += alpha[t][i] * A[i][j] * B[j][O[t+1]] * beta[t+1][j];
+                if (t < T - 1) { // Need to consider t+1
+                    for (std::size_t j = 0; j < N; j++)
+                        denominator_x += alpha[t][i] * A[i][j] * B[j][O[t + 1]] * beta[t + 1][j];
                     assertm(denominator_x != 0.0, "Division by zero!");
                 }
             }
             assertm(denominator_g != 0.0, "Division by zero!");
 
-            for (int i = 0; i < N; i++) {
+            for (std::size_t i = 0; i < N; i++) {
                 gamma[t][i] = (alpha[t][i] * beta[t][i]) / denominator_g;
-                if (t < T-1) {  // Need to consider t+1
-                    for (int j = 0; j < N; j++)
-                        xi[t][i][j] = (alpha[t][i] * A[i][j] * B[j][O[t+1]] * beta[t+1][j]) / denominator_x;
+                if (t < T - 1) { // Need to consider t+1
+                    for (std::size_t j = 0; j < N; j++)
+                        xi[t][i][j] = (alpha[t][i] * A[i][j] * B[j][O[t + 1]] * beta[t + 1][j]) / denominator_x;
                 }
             }
-
         }
 
-        
-        for (int i = 0; i < N; i++) {
+        for (std::size_t i = 0; i < N; i++) {
             // Update pi.
             pi[i] = gamma[0][i];
 
             // Update the transition matrix A.
             double denominator_A = 0.0; // Sum of all probability that pass state i before T.
-            for (int t = 0; t < T - 1; t++)
+            for (std::size_t t = 0; t < T - 1; t++)
                 denominator_A += gamma[t][i];
             assertm(denominator_A != 0.0, "Division by zero!");
 
-            for (int j = 0; j < N; j++) {
+            for (std::size_t j = 0; j < N; j++) {
                 double numerator_A = 0.0; // Sum of all probability that change from state i to  state j before T.
-                for (int t = 0; t < T - 1; t++)
+                for (std::size_t t = 0; t < T - 1; t++)
                     numerator_A += xi[t][i][j];
                 A[i][j] = numerator_A / denominator_A;
             }
-            
+
             // Update the emission matrix B.
-            double denominator_B = 0.0;             // Sum of all probability that pass state i in T.
-            double *numerator_B = new double[M];    // Sum of all probability that emmit k (=o[t]) from state i in T.
-            for (int t = 0; t < T; t++) {
+            double denominator_B = 0.0; // Sum of all probability that pass state i in T.
+            double* numerator_B = new double[M]; // Sum of all probability that emmit k (=o[t]) from state i in T.
+            for (std::size_t t = 0; t < T; t++) {
                 numerator_B[O[t]] += gamma[t][i];
                 denominator_B += gamma[t][i];
             }
             assertm(denominator_B != 0.0, "Division by zero!");
 
-            for (int k = 0; k < M; k++)
+            for (std::size_t k = 0; k < M; k++)
                 B[i][k] = numerator_B[k] / denominator_B;
-
         }
     }
 }
