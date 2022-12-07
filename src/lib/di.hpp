@@ -1,3 +1,4 @@
+#include "constants.h"
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -6,7 +7,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "constants.h"
 
 const std::tuple<double*, std::size_t> read_hi_c_data(const std::string& filename, const std::size_t& bin_size, const std::size_t& bin1_min, const std::size_t& bin1_max, const std::size_t& bin2_min, const std::size_t& bin2_max) {
     std::fstream file;
