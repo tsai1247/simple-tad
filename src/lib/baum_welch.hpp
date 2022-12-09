@@ -73,7 +73,7 @@ backward(const std::vector<std::vector<double>>& A,
         beta[T - 1][i] = 1.0;
 
     // Calc the backward probabilities for each step.
-    for (std::size_t t = T - 2; t >= 0; t--) { // Now is observation t (t is from T - 2 because we already init last observation).
+    for (std::size_t t = T - 2; t <= T - 2; t--) { // Now is observation t (t is from T - 2 because we already init last observation).
         for (std::size_t i = 0; i < N; i++) { // From state i.
             double sum = 0.0; // Sum of all probabilities to state j in t
             for (std::size_t j = 0; j < N; j++) // Current is state j.
