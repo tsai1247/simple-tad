@@ -103,7 +103,7 @@ void baum_welch(std::vector<std::vector<double>>& A,
     const std::vector<int>& O,
     double tolerance = 1e-5,
     int maxIterations = 1000) {
-    const auto M = B.size(); // get the number of emission.
+    const auto M = B[0].size(); // get the number of emission.
     const auto N = A.size(); // get the number of hidden states.
     const auto T = O.size(); // get the length of observed sequence.
 
@@ -178,7 +178,8 @@ void baum_welch(std::vector<std::vector<double>>& A,
 
             // Update the emission matrix B.
             double denominator_B = 0.0; // Sum of all probability that pass state i in T.
-            double* numerator_B = new double[M]; // Sum of all probability that emmit k (=o[t]) from state i in T.
+            // double* numerator_B = new double[M]; // Sum of all probability that emmit k (=o[t]) from state i in T.
+            std::vector<double> numerator_B(M, 0);
             for (std::size_t t = 0; t < T; t++) {
                 numerator_B[O[t]] += gamma[t][i];
                 denominator_B += gamma[t][i];
