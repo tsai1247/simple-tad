@@ -37,10 +37,10 @@ forward(const std::vector<std::vector<double>>& A,
     
     // Calc the forward probabilities for each step.
     // Similar to viterbi but sum up all probabilities.
-    for (int t = 1; t < T; t++) {            // Now is observation t (t is from 1 because we skip init observation).
-        for (int j = 0; j < N; j++) {        // Current is state j.
-            double sum = 0.0;                   // Sum of all probabilities to state j in t 
-            for (int i = 0; i < N; i++)      // From state i.
+    for (int t = 1; t < T; t++) {           // Now is observation t (t is from 1 because we skip init observation).
+        for (int j = 0; j < N; j++) {       // Current is state j.
+            double sum = 0.0;               // Sum of all probabilities to state j in t 
+            for (int i = 0; i < N; i++)     // From state i.
                 sum += alpha[t-1][i] * A[i][j]; // Translate from state i to state j.
             alpha[t][j] = sum * B[j][O[t]];     // B[j][O[t]] means the probability of emit O[t] in state j.
         }
@@ -75,12 +75,12 @@ backward(   const std::vector<std::vector<double>>& A,
         beta[T - 1][i] = 1.0;
 
     // Calc the backward probabilities for each step.
-    for (int t = T - 2; t >= 0; t--) {   // Now is observation t (t is from T - 2 because we already init last observation).
-        for (int i = 0; i < N; i++) {    // From state i.
-            double sum = 0.0;               // Sum of all probabilities to state j in t
-            for (int j = 0; j < N; j++)  // Current is state j.
+    for (int t = T - 2; t >= 0; t--) {  // Now is observation t (t is from T - 2 because we already init last observation).
+        for (int i = 0; i < N; i++) {   // From state i.
+            double sum = 0.0;           // Sum of all probabilities to state j in t
+            for (int j = 0; j < N; j++) // Current is state j.
                 sum += A[i][j] * B[j][O[t + 1]] * beta[t + 1][j]; // beta[t + 1][j] means likelihood from j state rear step.
-            beta[t][i] = sum;   // Likelihood from i state to j state in t step.
+            beta[t][i] = sum;           // Likelihood from i state to j state in t step.
         }
     }
     return beta;
@@ -161,7 +161,6 @@ baum_welch( std::vector<std::vector<double>>& A,
             }
 
         }
-
         
         for (int i = 0; i < N; i++) {
             // Update pi.

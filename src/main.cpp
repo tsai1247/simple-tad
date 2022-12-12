@@ -4,9 +4,11 @@
 #include <string>
 #include <chrono>
 
+#define HiC_DATA_PATH "../data/GM12878_MboI_Diag_chr6.csv"
+
 int main() {
     auto start = std::chrono::high_resolution_clock::now();
-    auto& [data, edge_size] = read_hi_c_data("./data/GM12878_MboI_Diag_chr6.csv", 5000, 305000, 170085000, 825000, 170605000);
+    auto& [data, edge_size] = read_hi_c_data(HiC_DATA_PATH, 5000, 305000, 170085000, 825000, 170605000);
     auto end_read_data = std::chrono::high_resolution_clock::now();
     auto di = calculate_di(data, edge_size, 5000);
     auto end_calculate_di = std::chrono::high_resolution_clock::now();
