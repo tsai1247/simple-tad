@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-const std::tuple<double*, std::size_t> read_hi_c_data(const std::string& filename, const std::size_t& bin_size, const std::size_t& bin1_min, const std::size_t& bin1_max, const std::size_t& bin2_min, const std::size_t& bin2_max) {
+const std::tuple<float*, std::size_t> read_hi_c_data(const std::string& filename, const std::size_t& bin_size, const std::size_t& bin1_min, const std::size_t& bin1_max, const std::size_t& bin2_min, const std::size_t& bin2_max) {
     std::fstream file;
     file.open(filename, std::ios::in);
 
@@ -21,7 +21,7 @@ const std::tuple<double*, std::size_t> read_hi_c_data(const std::string& filenam
 
     std::size_t edge_size = std::max((bin1_max - bin1_min), (bin2_max - bin2_min)) / bin_size + 1;
 
-    double* data = new double[edge_size * edge_size];
+    float* data = new float[edge_size * edge_size];
     std::string line;
 
     // skip header
@@ -32,7 +32,7 @@ const std::tuple<double*, std::size_t> read_hi_c_data(const std::string& filenam
         std::string chr;
         std::size_t bin1;
         std::size_t bin2;
-        double rescaled_intensity;
+        float rescaled_intensity;
         std::size_t diag_offset;
         std::size_t dist;
 
@@ -58,38 +58,40 @@ const std::tuple<double*, std::size_t> read_hi_c_data(const std::string& filenam
     return std::make_tuple(data, edge_size);
 }
 
-double accumulate_SIMD(const double* data, std::size_t size) {
-    double sum = 0;
+float accumulate_SIMD(const float* data, std::size_t size) {
+    float sum = 0;
 
-    std::size_t remain = size % 4;
+    std::size_t remain = size % 8;
     size -= remain;
 
-    __m256d sum_vec = _mm256_setzero_pd();
-    __m256d data_vec;
+    __m256 sum_vec = _mm256_setzero_ps();
+    __m256 data_vec;
 
-    for (std::size_t i = 0; i < size; i += 4) {
-        data_vec = _mm256_loadu_pd(data + i);
-        sum_vec = _mm256_add_pd(sum_vec, data_vec);
-    }
-    sum_vec = _mm256_hadd_pd(sum_vec, sum_vec);
-    sum_vec = _mm256_permute4x64_pd(sum_vec, 0b11011000);
-    sum_vec = _mm256_hadd_pd(sum_vec, sum_vec);
-    _mm256_storeu_pd(&sum, sum_vec);
+    for (std::size_t i = 0; i < size; i += 8) {
+        data_vec = _mm256_loadu_ps(data + i);
+        sum_vec = _mm256_add_ps(sum_vec, data_vec);
+    }    
+    
+    __m256 swap = _mm256_permute2f128_ps(sum_vec, sum_vec, 0x01);
+    sum_vec = _mm256_add_ps(sum_vec, swap);
+    sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
+    sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
+    _mm256_storeu_ps(&sum, sum_vec);
 
-    for (std::size_t i = size; i < size + remain; i++) {
+    for (std::size_t i = size; i < size + remain; ++i) {
         sum += data[i];
     }
 
     return sum;
 }
 
-std::vector<double> calculate_di(const double* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
+std::vector<float> calculate_di(const float* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
     std::size_t range = SIGNIFICANT_BINS / bin_size;
-    std::vector<double> di(edge_size, 0);
+    std::vector<float> di(edge_size, 0);
 
-    for (std::size_t locus_index = 0; locus_index < edge_size; locus_index++) {
-        double A;
-        double B;
+    for (std::size_t locus_index = 0; locus_index < edge_size; ++locus_index) {
+        float A;
+        float B;
         if (locus_index < range) {
             // edge case
             A = accumulate_SIMD(contact_matrix + locus_index * edge_size, locus_index);
@@ -104,7 +106,7 @@ std::vector<double> calculate_di(const double* contact_matrix, const std::size_t
             B = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index + 1, range);
         }
 
-        double E = (A + B) / 2;
+        float E = (A + B) / 2;
 
         if (A == 0 && B == 0) {
             di[locus_index] = 0;
