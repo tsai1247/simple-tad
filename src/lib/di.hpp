@@ -58,7 +58,7 @@ const std::tuple<float*, std::size_t> read_hi_c_data(const std::string& filename
     return std::make_tuple(data, edge_size);
 }
 
-float accumulate_SIMD(const float* data, std::size_t size) {
+float accumulate_AVX2(const float* data, std::size_t size) {
     float sum = 0;
 
     std::size_t remain = size % 8;
@@ -85,7 +85,7 @@ float accumulate_SIMD(const float* data, std::size_t size) {
     return sum;
 }
 
-std::vector<float> calculate_di(const float* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
+std::vector<float> calculate_di_AVX2(const float* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
     std::size_t range = SIGNIFICANT_BINS / bin_size;
     std::vector<float> di(edge_size, 0);
 
@@ -94,16 +94,16 @@ std::vector<float> calculate_di(const float* contact_matrix, const std::size_t& 
         float B;
         if (locus_index < range) {
             // edge case
-            A = accumulate_SIMD(contact_matrix + locus_index * edge_size, locus_index);
-            B = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index + 1, range);
+            A = accumulate_AVX2(contact_matrix + locus_index * edge_size, locus_index);
+            B = accumulate_AVX2(contact_matrix + locus_index * edge_size + locus_index + 1, range);
         } else if (locus_index >= edge_size - range) {
             // edge case
-            A = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index - range, range);
-            B = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index + 1, edge_size - locus_index - 1);
+            A = accumulate_AVX2(contact_matrix + locus_index * edge_size + locus_index - range, range);
+            B = accumulate_AVX2(contact_matrix + locus_index * edge_size + locus_index + 1, edge_size - locus_index - 1);
         } else {
             // normal case
-            A = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index - range, range);
-            B = accumulate_SIMD(contact_matrix + locus_index * edge_size + locus_index + 1, range);
+            A = accumulate_AVX2(contact_matrix + locus_index * edge_size + locus_index - range, range);
+            B = accumulate_AVX2(contact_matrix + locus_index * edge_size + locus_index + 1, range);
         }
 
         float E = (A + B) / 2;
