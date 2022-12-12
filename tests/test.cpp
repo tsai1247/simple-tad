@@ -1,4 +1,5 @@
-#include "../lib/viterbi.hpp"
+#include "viterbi.hpp"
+#include "gtest/gtest.h"
 
 double emission_probability(double emit_value, BiasState state) {
     auto sigma = 25, mu = 0;
@@ -18,7 +19,7 @@ double emission_probability(double emit_value, BiasState state) {
     return ret;
 }
 
-int main() {
+TEST(tests, viterbi_scalar) {
     vector<double> observation = { 50, 12, -3, -20, 1, 5, -18 };
 
     vector<BiasState> states = { UpstreamBias, DownstreamBias, NoBias };
@@ -50,8 +51,12 @@ int main() {
 
     double (*emission_p)(double, BiasState) = emission_probability;
     auto viterbi_result = viterbi(observation, states, start_p, transition_p, emission_p);
-    for (auto& result : viterbi_result) {
-        cout << "'" << result << "', ";
-    }
-    cout << endl;
+
+    vector<BiasState> expected_result = { DownstreamBias, UpstreamBias, DownstreamBias, UpstreamBias, DownstreamBias, UpstreamBias, NoBias };
+    EXPECT_EQ(viterbi_result, expected_result);
+}
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
