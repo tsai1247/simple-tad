@@ -16,11 +16,6 @@ double logadd(double x, double y) {
         return x + std::log1p(std::exp(y - x));
     else
         return y + std::log1p(std::exp(x - y));
-    // if(x == -INFINITY)
-    //   return y;
-    // if(y == INFINITY)
-    //   return x;
-    // return std::max(x, y) + log1p(exp( -fabs(x - y) ));
 }
 
 /*  Forward algorithm
@@ -84,8 +79,6 @@ backward(const std::vector<std::vector<double>>& A,
     std::vector<std::vector<double>> beta(T, std::vector<double>(N));
 
     // Calc the initial backward probabilities
-    // for (std::size_t i = 0; i < N; i++)
-    //     beta[T - 1][i] = 1.0;
     for (std::size_t i = 0; i < N; i++)
         beta[T - 1][i] = 0.0; // 0 = log (1.0)
 
@@ -185,12 +178,8 @@ void baum_welch(const std::vector<int>& O,
             }
         }
 
-        // Update prob
-        // std::vector<double> gamma_sum(N, -INFINITY);
-        // std::vector<double> xi_sum(N, -INFINITY);
-        double pi_sum = -INFINITY;
-
         // Update pi.
+        double pi_sum = -INFINITY;
         for (std::size_t i = 0; i < N; ++i) {
             pi[i] = logadd(pi[i], gamma[0][i]);
             pi_sum = logadd(pi[i], pi_sum);
@@ -220,9 +209,7 @@ void baum_welch(const std::vector<int>& O,
             for (std::size_t k = 0; k < M; k++)
                 B[i][k] = p[k] - gamma_sum;
         }
-        // std::cout << '\r' << "Iteration: " << std::setw(5) << std::setfill(' ') << iter << std::flush;
     }
-    // std::cout << std::endl;
 }
 
 void baum_welch(const std::vector<int>& O) {
@@ -277,48 +264,3 @@ void baum_welch(const std::vector<int>& O) {
         std::cout << std::setiosflags(std::ios::fixed)  << p << " ";
     std::cout << std::endl;
 }
-
-/*
-int main() {
-    // Define the HMM parameters
-    // A:  transition matrix
-    std::vector<std::vector<float>> A = {{0.7, 0.3},
-                                          {0.4, 0.6}};
-    // B:  emission matrix
-    std::vector<std::vector<float>> B = {{0.1, 0.4, 0.5},
-                                          {0.7, 0.2, 0.1}};
-
-    // pi: initial state distribution
-    std::vector<float> pi = {0.6, 0.4};
-
-    // Define the observed sequence
-    std::vector<int> O = {0, 1, 2, 0};
-
-    // Estimate the HMM parameters using the Baum-Welch algorithm
-    baum_welch(A, B, pi, O);
-
-    // Print the estimated parameters
-    std::cout << "Estimated transition matrix A:" << std::endl;
-    for (const auto& row : A)
-    {
-        for (const auto& a : row)
-            std::cout << a << " ";
-        std::cout << std::endl;
-    }
-
-    std::cout << "Estimated emission matrix B:" << std::endl;
-    for (const auto& row : B)
-    {
-        for (const auto& b : row)
-            std::cout << b << " ";
-        std::cout << std::endl;
-    }
-
-    std::cout << "Estimated initial state distribution pi:" << std::endl;
-    for (const auto& p : pi)
-        std::cout << p << " ";
-    std::cout << std::endl;
-
-    return 0;
-}
-*/
