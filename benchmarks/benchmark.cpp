@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <iostream>
 
-std::vector<float> calculate_di_SCALAR(const float* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
+float* calculate_di_SCALAR(const float* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
     std::size_t range = SIGNIFICANT_BINS / bin_size;
-    std::vector<float> di(edge_size, 0);
+    float* di = new float[edge_size]();
 
     for (std::size_t locus_index = 0; locus_index < edge_size; ++locus_index) {
         float A;
