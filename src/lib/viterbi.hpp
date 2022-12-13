@@ -22,7 +22,7 @@ input:
 output:
     長度與DI array相同的int陣列，內容是每個DI值對應到的bias。
 */
-BiasState* viterbi(float* observation, size_t sizeof_observation, 
+vector<BiasState> viterbi(float* observation, size_t sizeof_observation, 
     float* start_p, float* transition_p, float (*emission_p)(float, int)) {
 
     // 宣告V變數，V變數用來記錄當前的最佳機率與上一次迭代的最佳機率
@@ -90,10 +90,10 @@ BiasState* viterbi(float* observation, size_t sizeof_observation,
         }
     }
 
-    BiasState* result = (BiasState*)malloc(sizeof_observation * sizeof(BiasState));
+    vector<BiasState> result;
     for(int i=0; i<sizeof_observation; i++)
     {
-        result[i] = static_cast<BiasState>(path[end_state][i]);
+        result.push_back(static_cast<BiasState>(path[end_state][i]));
     }
     return result;
 }
