@@ -205,6 +205,7 @@ void baum_welch(std::vector<std::vector<double>>& A,
     }
 }
 
+/*
 int main() {
     // Define the HMM parameters
     // A:  transition matrix
@@ -264,3 +265,4 @@ int main() {
 
     return 0;
 }
+*/
