@@ -2,6 +2,7 @@
 #include "viterbi.hpp"
 #include "baum_welch.hpp"
 #include "gtest/gtest.h"
+#define PI acos(-1)
 
 TEST(tests, di) {
     float* data = new float[25]{
