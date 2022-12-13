@@ -1,6 +1,27 @@
+#include "di.hpp"
 #include "viterbi.hpp"
 #include "baum_welch.hpp"
 #include "gtest/gtest.h"
+
+TEST(tests, di) {
+    float* data = new float[25]{
+        0.1, 0.3, 0.0, 0.0, 0.0,
+        0.2, 0.4, 0.4, 0.0, 0.0,
+        0.0, 0.5, 0.6, 0.3, 0.0,
+        0.0, 0.0, 0.1, 0.4, 0.1,
+        0.0, 0.0, 0.0, 0.1, 0.2
+    };
+
+    float* expected_di = new float[5]{
+        0.3, 0.0666667, -0.05, 0.0, -0.1
+    };
+
+    float* di = calculate_di_AVX2(data, 5, SIGNIFICANT_BINS/2);
+
+    for (int i = 0; i < 5; i++) {
+        EXPECT_NEAR(di[i], expected_di[i], 1e-4);
+    }
+}
 
 double emission_probability(double emit_value, BiasState state) {
     auto sigma = 25, mu = 0;
