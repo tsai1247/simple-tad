@@ -136,13 +136,10 @@ void baum_welch(const std::vector<int>& O,
         for (std::size_t i = 0; i < N; i++)
             newloglik = logadd(newloglik, alpha[T - 1][i]);
 
-        // std::cerr << "from alpha: " << newloglik << std::endl;
-
         // Check if converge.
         if (std::abs(std::exp(newloglik) - std::exp(loglik)) < tolerance)
             break;
         loglik = newloglik;
-        // std::cout << newloglik << std::endl;
 
         // Check if reach maxIterations.
         if (iter >= maxIterations)
@@ -166,16 +163,13 @@ void baum_welch(const std::vector<int>& O,
                 }
             }
 
-            std::cerr << t << std::endl;
             for (std::size_t i = 0; i < N; i++) {
                 gamma[t][i] = (alpha[t][i] + beta[t][i]) - denominator_g;
-                std::cerr << gamma[t][i] << ' ';
                 if (t < T - 1) { // Need to consider t+1
                     for (std::size_t j = 0; j < N; j++)
                         xi[t][i][j] = (alpha[t][i] + A[i][j] + B[j][O[t + 1]] + beta[t + 1][j]) - denominator_x;
                 }
             }
-            std::cerr << std::endl;
         }
 
         for (std::size_t i = 0; i < N; i++) {
@@ -222,6 +216,7 @@ void baum_welch(const std::vector<int>& O,
 
     // pi: initial state distribution
     std::vector<float> pi = {0.4, 0.3, 0.3};
+    
     // Estimate the HMM parameters using the Baum-Welch algorithm
     baum_welch(O, A, B, pi);
 }
