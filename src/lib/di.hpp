@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <cmath>
 
 const std::tuple<float*, std::size_t> read_hi_c_data(const std::string& filename, const std::size_t& bin_size, const std::size_t& bin1_min, const std::size_t& bin1_max, const std::size_t& bin2_min, const std::size_t& bin2_max) {
     std::fstream file;
@@ -85,9 +86,9 @@ float accumulate_AVX2(const float* data, std::size_t size) {
     return sum;
 }
 
-std::vector<float> calculate_di_AVX2(const float* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
+float* calculate_di_AVX2(const float* contact_matrix, const std::size_t& edge_size, const std::size_t& bin_size) {
     std::size_t range = SIGNIFICANT_BINS / bin_size;
-    std::vector<float> di(edge_size, 0);
+    float* di = new float[edge_size]();
 
     for (std::size_t locus_index = 0; locus_index < edge_size; ++locus_index) {
         float A;
@@ -118,5 +119,12 @@ std::vector<float> calculate_di_AVX2(const float* contact_matrix, const std::siz
             }
         }
     }
+
+    for (std::size_t i = 0; i < edge_size; ++i) {
+        if (std::isnan(di[i])) {
+            di[i] = 0;
+        }
+    }
+
     return di;
 }
