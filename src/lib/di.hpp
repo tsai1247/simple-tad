@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <cmath>
 
 const std::tuple<float*, std::size_t> read_hi_c_data(const std::string& filename, const std::size_t& bin_size, const std::size_t& bin1_min, const std::size_t& bin1_max, const std::size_t& bin2_min, const std::size_t& bin2_max) {
     std::fstream file;
@@ -118,5 +119,12 @@ float* calculate_di_AVX2(const float* contact_matrix, const std::size_t& edge_si
             }
         }
     }
+
+    for (std::size_t i = 0; i < edge_size; ++i) {
+        if (std::isnan(di[i])) {
+            di[i] = 0;
+        }
+    }
+
     return di;
 }
