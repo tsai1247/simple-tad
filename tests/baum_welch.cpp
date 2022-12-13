@@ -12,7 +12,7 @@
 
 // When add in log likelihood.
 double logadd(double x, double y) {
-    if (y <= x)
+    if (x >= y)
         return x + std::log1p(std::exp(y - x));
     else
         return y + std::log1p(std::exp(x - y));
@@ -79,6 +79,8 @@ backward(const std::vector<std::vector<double>>& A,
     std::vector<std::vector<double>> beta(T, std::vector<double>(N));
 
     // Calc the initial backward probabilities
+    // for (std::size_t i = 0; i < N; i++)
+    //     beta[T - 1][i] = 1.0;
     for (std::size_t i = 0; i < N; i++)
         beta[T - 1][i] = 0.0; // 0 = log (1.0)
 
@@ -107,12 +109,12 @@ backward(const std::vector<std::vector<double>>& A,
  *  Outputs:
  *      void
  */
-void baum_welch(const std::vector<int>& O,
-    std::vector<std::vector<double>>& A,
+void baum_welch(std::vector<std::vector<double>>& A,
     std::vector<std::vector<double>>& B,
     std::vector<double>& pi,
-    double tolerance = 1e-7,
-    int maxIterations = 5) {
+    const std::vector<int>& O,
+    double tolerance = 1e-5,
+    int maxIterations = 10000) {
     const auto M = B[0].size(); // get the number of emission.
     const auto N = A.size(); // get the number of hidden states.
     const auto T = O.size(); // get the length of observed sequence.
@@ -127,25 +129,19 @@ void baum_welch(const std::vector<int>& O,
         auto alpha = forward(A, B, pi, O);
         auto beta = backward(A, B, O);
 
-        // for (std::size_t i = 0; i < T; i++) {
-        //     for (std::size_t j = 0; j < N; j++) {
-        //         std::cerr << std::setiosflags(std::ios::fixed) << beta[i][j] << " ";
-        //     }
-        //     std::cerr << std::endl;
-        // }
-        // std::cerr << "===============================================" << std::endl;
-
         // Calc the likelihood of the observed data.
         // Use beta[0] will get same result.
         double newloglik = -INFINITY;
         for (std::size_t i = 0; i < N; i++)
             newloglik = logadd(newloglik, alpha[T - 1][i]);
 
+        // std::cerr << "from alpha: " << newloglik << std::endl;
+
         // Check if converge.
         if (std::abs(std::exp(newloglik) - std::exp(loglik)) < tolerance)
             break;
-        // std::cerr << std::abs(std::exp(newloglik) - std::exp(loglik)) << std::endl;
         loglik = newloglik;
+        // std::cout << newloglik << std::endl;
 
         // Check if reach maxIterations.
         if (iter >= maxIterations)
@@ -156,63 +152,60 @@ void baum_welch(const std::vector<int>& O,
          *      gamma[t][i]: In t (idx of observed sequence T) the sum of probability of passing state i.
          *      xi[t][i][j]: In t (idx of observed sequence T) the sum of probability of path from i (idx=t) to j (idx=t+1, obmit here).
          */
-        std::vector<std::vector<double>> gamma(T, std::vector<double>(N, -INFINITY));
-        std::vector<std::vector<std::vector<double>>> xi(T, std::vector<std::vector<double>>(N, std::vector<double>(N, -INFINITY)));
+        std::vector<std::vector<double>> gamma(T, std::vector<double>(N));
+        std::vector<std::vector<std::vector<double>>> xi(T, std::vector<std::vector<double>>(N, std::vector<double>(N)));
         for (std::size_t t = 0; t < T; t++) {
 
             double denominator_g = -INFINITY, denominator_x = -INFINITY;
             for (std::size_t i = 0; i < N; i++) {
-                denominator_g = logadd(denominator_g, (alpha[t][i] + beta[t][i] - loglik));
+                denominator_g = logadd(denominator_g, (alpha[t][i] + beta[t][i]));
                 if (t < T - 1) { // Need to consider t+1
                     for (std::size_t j = 0; j < N; j++)
-                        denominator_x = logadd(denominator_x, (alpha[t][i] + A[i][j] + B[j][O[t + 1]] + beta[t + 1][j] - loglik));
+                        denominator_x = logadd(denominator_x, (alpha[t][i] + A[i][j] + B[j][O[t + 1]] + beta[t + 1][j]));
                 }
             }
 
+            std::cerr << t << std::endl;
             for (std::size_t i = 0; i < N; i++) {
-                gamma[t][i] = alpha[t][i] + beta[t][i] - denominator_g;//logadd(gamma[t][i], (alpha[t][i] + beta[t][i] - loglik));
+                gamma[t][i] = (alpha[t][i] + beta[t][i]) - denominator_g;
+                std::cerr << gamma[t][i] << ' ';
                 if (t < T - 1) { // Need to consider t+1
                     for (std::size_t j = 0; j < N; j++)
-                        xi[t][i][j] = alpha[t][i] + A[i][j] + B[j][O[t + 1]] + beta[t + 1][j] - denominator_x;//logadd(xi[t][i][j], (alpha[t][i] + A[i][j] + B[j][O[t + 1]] + beta[t + 1][j] - loglik));
+                        xi[t][i][j] = (alpha[t][i] + A[i][j] + B[j][O[t + 1]] + beta[t + 1][j]) - denominator_x;
                 }
             }
-        }
-
-        // Update pi.
-        double pi_sum = -INFINITY;
-        for (std::size_t i = 0; i < N; ++i) {
-            pi[i] = logadd(pi[i], gamma[0][i]);
-            pi_sum = logadd(pi[i], pi_sum);
+            std::cerr << std::endl;
         }
 
         for (std::size_t i = 0; i < N; i++) {
-            // Update pi marginalize.
-            pi[i] = pi[i] - pi_sum;
+            // Update pi.
+            pi[i] = gamma[0][i];
 
             // Update the transition matrix A.
-            double gamma_sum = -INFINITY; // Sum of all probability that change from state i to  state j before T.
-            for (std::size_t t = 0; t < T - 1; t++)
-                gamma_sum = logadd(gamma_sum, gamma[t][i]);
             for (std::size_t j = 0; j < N; j++) {
-                double xi_sum = -INFINITY;
-                for (std::size_t t = 0; t < T-1; t++)
+                double xi_sum = -INFINITY, gamma_sum = -INFINITY; // Sum of all probability that change from state i to  state j before T.
+                for (std::size_t t = 0; t < T - 1; t++) {
                     xi_sum = logadd(xi_sum, xi[t][i][j]);
+                    gamma_sum = logadd(gamma_sum, gamma[t][i]);
+                }
                 A[i][j] = xi_sum - gamma_sum;
             }
 
             // Update the emission matrix B.
-            std::vector<double> p(M, -INFINITY); // Sum of all probability that emmit k (=o[t]) from state i in T.
+            double denominator_B = -INFINITY; // Sum of all probability that pass state i in T.
+            std::vector<double> numerator_B(M, -INFINITY); // Sum of all probability that emmit k (=o[t]) from state i in T.
             for (std::size_t t = 0; t < T; t++) {
-                p[O[t]] = logadd(p[O[t]], gamma[t][i]);
+                numerator_B[O[t]] = logadd(numerator_B[O[t]], gamma[t][i]);
+                denominator_B = logadd(denominator_B, gamma[t][i]);
             }
 
             for (std::size_t k = 0; k < M; k++)
-                B[i][k] = p[k] - gamma_sum;
+                B[i][k] = numerator_B[k] - denominator_B;
         }
     }
 }
 
-void baum_welch(const std::vector<int>& O) {
+int main() {
     // Define the HMM parameters
     // A:  transition matrix
     std::vector<std::vector<double>> A = {{0.7, 0.2, 0.1},
@@ -225,22 +218,27 @@ void baum_welch(const std::vector<int>& O) {
                                           {0.2, 0.1, 0.6}};
 
     // pi: initial state distribution
-    std::vector<double> pi = {0.4, 0.3, 0.3};
+    std::vector<double> pi = {0.6, 0.3, 0.3};
 
     std::transform(pi.begin(), pi.end(), pi.begin(), [](auto& p){return std::log1p(p);});
     for (std::size_t i = 0; i < A.size(); ++i) {
         std::transform(A[i].begin(), A[i].end(), A[i].begin(), [](auto& a){return std::log1p(a);});
         std::transform(B[i].begin(), B[i].end(), B[i].begin(), [](auto& b){return std::log1p(b);});
     }
-    
+
+    // Define the observed sequence
+    std::vector<int> O = {0, 1, 2, 2, 1, 0, 0, 1, 2, 1, 0, 0, 1, 2, 1, 0};
+
     // Estimate the HMM parameters using the Baum-Welch algorithm
-    baum_welch(O, A, B, pi);
+    baum_welch(A, B, pi, O);
 
     std::transform(pi.begin(), pi.end(), pi.begin(), [](auto& p){return std::exp(p);});
     for (std::size_t i = 0; i < A.size(); ++i) {
         std::transform(A[i].begin(), A[i].end(), A[i].begin(), [](auto& a){return std::exp(a);});
         std::transform(B[i].begin(), B[i].end(), B[i].begin(), [](auto& b){return std::exp(b);});
     }
+
+    std::cout << std::endl << "After estimate the HMM parameters using the Baum-Welch algorithm..." << std::endl;
 
     // Print the estimated parameters
     std::cout << "Estimated transition matrix A:" << std::endl;
@@ -263,4 +261,6 @@ void baum_welch(const std::vector<int>& O) {
     for (const auto& p : pi)
         std::cout << std::setiosflags(std::ios::fixed)  << p << " ";
     std::cout << std::endl;
+
+    return 0;
 }
