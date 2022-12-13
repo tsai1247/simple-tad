@@ -1,4 +1,5 @@
 #include "lib/di.hpp"
+#include "lib/baum_welch_loglik.hpp"
 #include <algorithm>
 #include <iostream>
 #include <string>
@@ -18,6 +19,15 @@ int main() {
 
     std::cout << "Read data: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_read_data - start).count() << "ns" << std::endl;
     std::cout << "Calculate di: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_calculate_di - end_read_data).count() << "ns" << std::endl;
+
+    std::vector<int> di_discrete(0, di.size());
+    std::transform(di.begin(), di.end(), di_discrete.begin(),
+        [](auto& idx) {
+            if (idx >= 0.4) return 1;
+            else if (idx <= - 0.4) return 2;
+            else return 0;
+        });
+    baum_welch(di_discrete);
 
     return 0;
 }
