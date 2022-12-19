@@ -42,5 +42,8 @@ int main() {
 
     std::cout << "Baum-Welch: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_em - start_em).count() << std::endl;
 
+    delete[] data;
+    delete[] di;
+
     return 0;
 }
