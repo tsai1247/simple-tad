@@ -1,266 +1,230 @@
-#include <cassert>
 #include <cmath>
-#include <cfloat>
-#include <iostream>
-#include <numeric>
-#include <vector>
 #include <iomanip>
-#include <algorithm>
+#include <iostream>
+#include <tuple>
 
-// Use (void) to silence unused warnings.
-#define assertm(exp, msg) assert(((void)msg, exp))
+#define TOLERANCE 1e-7
+#define MAX_ITERS 5
 
-// When add in log likelihood.
-double logadd(double x, double y) {
-    if (y <= x)
+float inline log_add(float x, float y) {
+    if (y <= x) {
         return x + std::log1p(std::exp(y - x));
-    else
+    } else {
         return y + std::log1p(std::exp(x - y));
+    }
 }
 
-/*  Forward algorithm
- *  Calculate the likelihood of the observed data
- *  Args:
- *      A:  transition matrix
- *      B:  emission matrix
- *      pi: initial state distribution
- *      O:  observed sequence
- *  Outputs:
- *      alpha:  the likelihood of each state
- *  Complexity:
- *      O(T*N*N) ~= O(T)
- */
-std::vector<std::vector<double>>
-forward(const std::vector<std::vector<double>>& A,
-    const std::vector<std::vector<double>>& B,
-    const std::vector<double>& pi,
-    const std::vector<int>& O) {
-    std::size_t N = A.size(); // get the number of hidden states.
-    std::size_t T = O.size(); // get the length of observed sequence.
+float* forward(
+    const int* observations,
+    const std::size_t num_observations,
+    const float* transition,
+    const float* emission,
+    const float* initial,
+    const std::size_t num_states) {
+    // init the alpha matrix
+    float* alpha = new float[num_states * num_observations]();
+    for (std::size_t i = 0; i < num_states; ++i) {
+        alpha[i] = initial[i] * emission[i * num_states + observations[0]];
+    }
 
-    // init alpha (forward probabilities).
-    std::vector<std::vector<double>> alpha(T, std::vector<double>(N));
-
-    // calc the initial forward probabilities.
-    for (std::size_t i = 0; i < N; i++)
-        alpha[0][i] = pi[i] + B[i][O[0]];
-
-    // Calc the forward probabilities for each step.
-    for (std::size_t t = 1; t < T; t++) { // Now is observation t (t is from 1 because we skip init observation).
-        for (std::size_t j = 0; j < N; j++) { // Current is state j.
-            for (std::size_t i = 0; i < N; i++) { // From state i.
-                double p = alpha[t - 1][i] + A[i][j] + B[j][O[t]];
-                alpha[t][j] = logadd(alpha[t][j], p); // B[j][O[t]] means the probability of emit O[t] in state j.
+    // compute the alpha matrix
+    for (std::size_t t = 1; t < num_observations; ++t) {
+        // now is observation t, and t is from 1 because we skip init observation
+        for (std::size_t curr_state = 0; curr_state < num_states; ++curr_state) {
+            for (std::size_t prev_state = 0; prev_state < num_states; ++prev_state) {
+                float p = alpha[(t - 1) * num_states + prev_state] + transition[prev_state * num_states + curr_state] + emission[curr_state * num_states + observations[t]];
+                alpha[t * num_states + curr_state] = log_add(alpha[t * num_states + curr_state], p);
             }
         }
     }
+
     return alpha;
 }
 
-/*  Backward algorithm
- *  Calculate the likelihood of the remaining part of the observed data.
- *  Args:
- *      A:  transition matrix
- *      B:  emission matrix
- *      O:  observed sequence
- *  Outputs:
- *      beta:  the likelihood of each state
- * Complexity:
- *      O(T*N*N) ~= O(T)
- */
-std::vector<std::vector<double>>
-backward(const std::vector<std::vector<double>>& A,
-    const std::vector<std::vector<double>>& B,
-    const std::vector<int>& O) {
-    std::size_t N = A.size(); // get the number of hidden states.
-    std::size_t T = O.size(); // get the length of observed sequence.
+float* backward(
+    const int* observations,
+    const std::size_t num_observations,
+    const float* transition,
+    const float* emission,
+    const std::size_t num_states) {
+    // init the beta matrix
+    float* beta = new float[num_states * num_observations]();
+    for (std::size_t i = 0; i < num_states; ++i) {
+        beta[(num_observations - 1) * num_states + i] = 0; // log(1)
+    }
 
-    // Init the backward probabilities.
-    std::vector<std::vector<double>> beta(T, std::vector<double>(N));
-
-    // Calc the initial backward probabilities
-    for (std::size_t i = 0; i < N; i++)
-        beta[T - 1][i] = 0.0; // 0 = log (1.0)
-
-    // Calc the backward probabilities for each step.
-    for (std::size_t t = T - 2; t <= T - 2; t--) { // Now is observation t (t is from T - 2 because we already init last observation).
-        for (std::size_t i = 0; i < N; i++) { // From state i.
-            for (std::size_t j = 0; j < N; j++) { // Current is state j.
-                double p = beta[t + 1][j] + A[i][j] + B[j][O[t + 1]]; // beta[t + 1][j] means likelihood from j state rear step.
-                beta[t][i] = logadd(beta[t][i], p); // Likelihood from i state to j state in t step.
+    // compute the beta matrix
+    for (std::size_t t = num_observations - 2;; --t) {
+        // now is observation t, and t is from (num_observations - 2) because we already init last observation
+        for (std::size_t prev_state = 0; prev_state < num_states; ++prev_state) {
+            for (std::size_t curr_state = 0; curr_state < num_states; ++curr_state) {
+                float p = beta[(t + 1) * num_states + curr_state] + transition[prev_state * num_states + curr_state] + emission[curr_state * num_states + observations[t + 1]];
+                beta[t * num_states + prev_state] = log_add(beta[t * num_states + prev_state], p);
             }
         }
+
+        if (t == 0) {
+            break;
+        }
     }
+
     return beta;
 }
 
-/*  Baum-Welch algorithm
- *  Uses the forward-backward algorithm to calculate the likelihood of the observed data
- *  given the current estimate of the HMM parameters.
- *  Args:
- *      A:  transition matrix
- *      B:  emission matrix
- *      pi: initial state distribution
- *      O:  observed sequence
- *      tolerance:      default = 1e-5
- *      maxIterations:  default = 1000
- *  Outputs:
- *      void
- */
-void baum_welch(const std::vector<int>& O,
-    std::vector<std::vector<double>>& A,
-    std::vector<std::vector<double>>& B,
-    std::vector<double>& pi,
-    double tolerance = 1e-7,
-    int maxIterations = 5) {
-    const auto M = B[0].size(); // get the number of emission.
-    const auto N = A.size(); // get the number of hidden states.
-    const auto T = O.size(); // get the length of observed sequence.
+void baum_welch(
+    const int* observations,
+    const std::size_t num_observations,
+    float* initial,
+    float* transition,
+    float* emission,
+    const std::size_t num_states) {
 
-    // Init the likelihood of the observed data.
-    double loglik = -INFINITY;
+    // transform initial to log space
+    float* log_initial = new float[num_states];
+    for (std::size_t i = 0; i < num_states; ++i) {
+        log_initial[i] = std::log1p(initial[i]);
+    }
 
-    // Iter until convergence or the maximum number of iterations is reached.
-    int iter = 0;
+    // transform transition matrix and emission matrix to log space
+    float* log_transition = new float[num_states * num_states];
+    float* log_emission = new float[num_states * num_states];
+    for (std::size_t i = 0; i < num_states * num_states; ++i) {
+        log_transition[i] = std::log1p(transition[i]);
+        log_emission[i] = std::log1p(emission[i]);
+    }
+
+    // init the likelihood of the observed data
+    float log_likelihood = -INFINITY;
+
+    std::size_t iter = 0;
     while (true) {
-        // Calc the forward and backward probabilities.
-        auto alpha = forward(A, B, pi, O);
-        auto beta = backward(A, B, O);
+        auto alpha = forward(observations, num_observations, log_transition, log_emission, log_initial, num_states);
+        auto beta = backward(observations, num_observations, log_transition, log_emission, num_states);
 
-        // for (std::size_t i = 0; i < T; i++) {
-        //     for (std::size_t j = 0; j < N; j++) {
-        //         std::cerr << std::setiosflags(std::ios::fixed) << beta[i][j] << " ";
-        //     }
-        //     std::cerr << std::endl;
-        // }
-        // std::cerr << "===============================================" << std::endl;
+        float new_log_likelihood = -INFINITY;
+        for (std::size_t i = 0; i < num_states; ++i) {
+            new_log_likelihood = log_add(new_log_likelihood, alpha[(num_observations - 1) * num_states + i]);
+        }
 
-        // Calc the likelihood of the observed data.
-        // Use beta[0] will get same result.
-        double newloglik = -INFINITY;
-        for (std::size_t i = 0; i < N; i++)
-            newloglik = logadd(newloglik, alpha[T - 1][i]);
-
-        // Check if converge.
-        if (std::abs(std::exp(newloglik) - std::exp(loglik)) < tolerance)
+        // check if the log likelihood is converged
+        if (std::abs(new_log_likelihood - log_likelihood) < TOLERANCE) {
+            delete[] alpha;
+            delete[] beta;
             break;
-        // std::cerr << std::abs(std::exp(newloglik) - std::exp(loglik)) << std::endl;
-        loglik = newloglik;
+        }
 
-        // Check if reach maxIterations.
-        if (iter >= maxIterations)
+        // update the log likelihood
+        log_likelihood = new_log_likelihood;
+
+        // check if the max iteration is reached
+        if (iter >= MAX_ITERS) {
+            delete[] alpha;
+            delete[] beta;
             break;
-        iter++;
+        }
 
-        /*  Calculate gamma and xi
-         *      gamma[t][i]: In t (idx of observed sequence T) the sum of probability of passing state i.
-         *      xi[t][i][j]: In t (idx of observed sequence T) the sum of probability of path from i (idx=t) to j (idx=t+1, obmit here).
+        /*  calculate gamma and xi
+         *      gamma[t][i]: in t (index of observations) the sum of probability of passing state i
+         *      xi[t][i][j]: in t (index of observations) the sum of probability of path from i (index=t) to j (index=t+1, obmit here)
          */
-        std::vector<std::vector<double>> gamma(T, std::vector<double>(N, -INFINITY));
-        std::vector<std::vector<std::vector<double>>> xi(T, std::vector<std::vector<double>>(N, std::vector<double>(N, -INFINITY)));
-        for (std::size_t t = 0; t < T; t++) {
+        float* gamma = new float[num_states * num_observations];
+        float* xi = new float[num_states * num_states * num_observations];
 
-            double denominator_g = -INFINITY, denominator_x = -INFINITY;
-            for (std::size_t i = 0; i < N; i++) {
-                denominator_g = logadd(denominator_g, (alpha[t][i] + beta[t][i] - loglik));
-                if (t < T - 1) { // Need to consider t+1
-                    for (std::size_t j = 0; j < N; j++)
-                        denominator_x = logadd(denominator_x, (alpha[t][i] + A[i][j] + B[j][O[t + 1]] + beta[t + 1][j] - loglik));
+        std::fill_n(gamma, num_states * num_observations, -INFINITY);
+        std::fill_n(xi, num_states * num_states * num_observations, -INFINITY);
+
+        for (std::size_t t = 0; t < num_observations; ++t) {
+            float denominator_g = -INFINITY;
+            float denominator_x = -INFINITY;
+
+            for (std::size_t i = 0; i < num_states; ++i) {
+                denominator_g = log_add(denominator_g, alpha[t * num_states + i] + beta[t * num_states + i] - log_likelihood);
+
+                if (t < num_observations - 1) {
+                    for (std::size_t j = 0; j < num_states; ++j) {
+                        denominator_x = log_add(denominator_x, alpha[t * num_states + i] + log_transition[i * num_states + j] + log_emission[j * num_states + observations[t + 1]] + beta[(t + 1) * num_states + j] - log_likelihood);
+                    }
                 }
             }
 
-            for (std::size_t i = 0; i < N; i++) {
-                gamma[t][i] = alpha[t][i] + beta[t][i] - denominator_g;//logadd(gamma[t][i], (alpha[t][i] + beta[t][i] - loglik));
-                if (t < T - 1) { // Need to consider t+1
-                    for (std::size_t j = 0; j < N; j++)
-                        xi[t][i][j] = alpha[t][i] + A[i][j] + B[j][O[t + 1]] + beta[t + 1][j] - denominator_x;//logadd(xi[t][i][j], (alpha[t][i] + A[i][j] + B[j][O[t + 1]] + beta[t + 1][j] - loglik));
+            for (std::size_t i = 0; i < num_states; ++i) {
+                gamma[t * num_states + i] = alpha[t * num_states + i] + beta[t * num_states + i] - denominator_g;
+
+                if (t < num_observations - 1) {
+                    for (std::size_t j = 0; j < num_states; ++j) {
+                        xi[t * num_states * num_states + i * num_states + j] = alpha[t * num_states + i] + log_transition[i * num_states + j] + log_emission[j * num_states + observations[t + 1]] + beta[(t + 1) * num_states + j] - denominator_x;
+                    }
                 }
             }
+
+            ++iter;
         }
 
-        // Update pi.
-        double pi_sum = -INFINITY;
-        for (std::size_t i = 0; i < N; ++i) {
-            pi[i] = logadd(pi[i], gamma[0][i]);
-            pi_sum = logadd(pi[i], pi_sum);
+        delete[] alpha;
+        delete[] beta;
+
+        // update initial
+        float initial_sum = -INFINITY;
+        for (std::size_t i = 0; i < num_states; ++i) {
+            log_initial[i] = log_add(log_initial[i], gamma[i]);
+            initial_sum = log_add(initial_sum, log_initial[i]);
         }
 
-        for (std::size_t i = 0; i < N; i++) {
-            // Update pi marginalize.
-            pi[i] = pi[i] - pi_sum;
+        // update initial marginalize
+        for (std::size_t i = 0; i < num_states; ++i) {
+            log_initial[i] -= initial_sum;
+        }
 
-            // Update the transition matrix A.
-            double gamma_sum = -INFINITY; // Sum of all probability that change from state i to  state j before T.
-            for (std::size_t t = 0; t < T - 1; t++)
-                gamma_sum = logadd(gamma_sum, gamma[t][i]);
-            for (std::size_t j = 0; j < N; j++) {
-                double xi_sum = -INFINITY;
-                for (std::size_t t = 0; t < T-1; t++)
-                    xi_sum = logadd(xi_sum, xi[t][i][j]);
-                A[i][j] = xi_sum - gamma_sum;
+        // update transition matrix and emission matrix
+        for (std::size_t prev_state = 0; prev_state < num_states; ++prev_state) {
+            for (std::size_t curr_state = 0; curr_state < num_states; ++curr_state) {
+                float gamma_sum = -INFINITY; // sum of all probability that change from prev_state to curr_state before num_observations
+
+                for (std::size_t t = 0; t < num_observations - 1; ++t) {
+                    gamma_sum = log_add(gamma_sum, gamma[t * num_states + prev_state]);
+                }
+
+                // update transition matrix
+                for (std::size_t t = 0; t < num_observations - 1; ++t) {
+                    float xi_sum = -INFINITY;
+                    for (std::size_t k = 0; k < num_states; ++k) {
+                        xi_sum = log_add(xi_sum, xi[t * num_states * num_states + prev_state * num_states + k]);
+                    }
+                    log_transition[prev_state * num_states + curr_state] = xi_sum - gamma_sum;
+                }
+
+                // update emission matrix
+                float* p = new float[num_states]; // sum of all probability that emit k (= observations[t]) from prev_state in num_observations
+                std::fill_n(p, num_states, -INFINITY);
+
+                for (std::size_t t = 0; t < num_observations; ++t) {
+                    p[observations[t]] = log_add(p[observations[t]], gamma[t * num_states + prev_state]);
+                }
+
+                for (std::size_t k = 0; k < num_states; ++k) {
+                    log_emission[prev_state * num_states + k] = p[k] - gamma_sum;
+                }
+
+                delete[] p;
             }
-
-            // Update the emission matrix B.
-            std::vector<double> p(M, -INFINITY); // Sum of all probability that emmit k (=o[t]) from state i in T.
-            for (std::size_t t = 0; t < T; t++) {
-                p[O[t]] = logadd(p[O[t]], gamma[t][i]);
-            }
-
-            for (std::size_t k = 0; k < M; k++)
-                B[i][k] = p[k] - gamma_sum;
         }
-    }
-}
 
-void baum_welch(const std::vector<int>& O) {
-    // Define the HMM parameters
-    // A:  transition matrix
-    std::vector<std::vector<double>> A = {{0.7, 0.2, 0.1},
-                                          {0.1, 0.6, 0.3},
-                                          {0.2, 0.3, 0.5}};
-    
-    // B:  emission matrix
-    std::vector<std::vector<double>> B = {{0.7, 0.2, 0.1},
-                                          {0.1, 0.6, 0.3},
-                                          {0.2, 0.1, 0.6}};
-
-    // pi: initial state distribution
-    std::vector<double> pi = {0.4, 0.3, 0.3};
-
-    std::transform(pi.begin(), pi.end(), pi.begin(), [](auto& p){return std::log1p(p);});
-    for (std::size_t i = 0; i < A.size(); ++i) {
-        std::transform(A[i].begin(), A[i].end(), A[i].begin(), [](auto& a){return std::log1p(a);});
-        std::transform(B[i].begin(), B[i].end(), B[i].begin(), [](auto& b){return std::log1p(b);});
-    }
-    
-    // Estimate the HMM parameters using the Baum-Welch algorithm
-    baum_welch(O, A, B, pi);
-
-    std::transform(pi.begin(), pi.end(), pi.begin(), [](auto& p){return std::exp(p);});
-    for (std::size_t i = 0; i < A.size(); ++i) {
-        std::transform(A[i].begin(), A[i].end(), A[i].begin(), [](auto& a){return std::exp(a);});
-        std::transform(B[i].begin(), B[i].end(), B[i].begin(), [](auto& b){return std::exp(b);});
+        delete[] gamma;
+        delete[] xi;
     }
 
-    // Print the estimated parameters
-    std::cout << "Estimated transition matrix A:" << std::endl;
-    for (const auto& row : A)
-    {
-        for (const auto& a : row)
-            std::cout << std::setiosflags(std::ios::fixed)  << a << " ";
-        std::cout << std::endl;
+    // transform initial from log to normal
+    for (std::size_t i = 0; i < num_states; ++i) {
+        initial[i] = std::exp(log_initial[i]);
     }
 
-    std::cout << "Estimated emission matrix B:" << std::endl;
-    for (const auto& row : B)
-    {
-        for (const auto& b : row)
-            std::cout << std::setiosflags(std::ios::fixed)  << b << " ";
-        std::cout << std::endl;
+    // transform transition matrix and emission matrix from log to normal
+    for (std::size_t i = 0; i < num_states * num_states; ++i) {
+        transition[i] = std::exp(log_transition[i]);
+        emission[i] = std::exp(log_emission[i]);
     }
 
-    std::cout << "Estimated initial state distribution pi:" << std::endl;
-    for (const auto& p : pi)
-        std::cout << std::setiosflags(std::ios::fixed)  << p << " ";
-    std::cout << std::endl;
+    delete[] log_initial;
+    delete[] log_transition;
+    delete[] log_emission;
 }
