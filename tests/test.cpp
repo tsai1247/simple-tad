@@ -21,6 +21,10 @@ TEST(tests, di) {
     for (int i = 0; i < 5; i++) {
         EXPECT_NEAR(di[i], expected_di[i], 1e-4);
     }
+
+    delete[] data;
+    delete[] expected_di;
+    delete[] di;
 }
 
 double emission_probability(double emit_value, BiasState state) {
