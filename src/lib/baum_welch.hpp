@@ -4,7 +4,7 @@
 #include <tuple>
 
 #define TOLERANCE 1e-7
-#define MAX_ITERS 5
+#define MAX_ITERS 1000
 
 float inline log_add(float x, float y) {
     if (y <= x) {
@@ -107,7 +107,7 @@ void baum_welch(
         }
 
         // check if the log likelihood is converged
-        if (std::abs(new_log_likelihood - log_likelihood) < TOLERANCE) {
+        if (std::abs(std::exp(new_log_likelihood) - std::exp(log_likelihood)) < TOLERANCE) {
             delete[] alpha;
             delete[] beta;
             break;
@@ -177,36 +177,34 @@ void baum_welch(
 
         // update transition matrix and emission matrix
         for (std::size_t prev_state = 0; prev_state < num_states; ++prev_state) {
-            for (std::size_t curr_state = 0; curr_state < num_states; ++curr_state) {
-                float gamma_sum = -INFINITY; // sum of all probability that change from prev_state to curr_state before num_observations
-
-                for (std::size_t t = 0; t < num_observations - 1; ++t) {
-                    gamma_sum = log_add(gamma_sum, gamma[t * num_states + prev_state]);
-                }
-
-                // update transition matrix
-                for (std::size_t t = 0; t < num_observations - 1; ++t) {
-                    float xi_sum = -INFINITY;
-                    for (std::size_t k = 0; k < num_states; ++k) {
-                        xi_sum = log_add(xi_sum, xi[t * num_states * num_states + prev_state * num_states + k]);
-                    }
-                    log_transition[prev_state * num_states + curr_state] = xi_sum - gamma_sum;
-                }
-
-                // update emission matrix
-                float* p = new float[num_states]; // sum of all probability that emit k (= observations[t]) from prev_state in num_observations
-                std::fill_n(p, num_states, -INFINITY);
-
-                for (std::size_t t = 0; t < num_observations; ++t) {
-                    p[observations[t]] = log_add(p[observations[t]], gamma[t * num_states + prev_state]);
-                }
-
-                for (std::size_t k = 0; k < num_states; ++k) {
-                    log_emission[prev_state * num_states + k] = p[k] - gamma_sum;
-                }
-
-                delete[] p;
+            float gamma_sum = -INFINITY; // sum of all probability that change from prev_state to curr_state before num_observations
+            for (std::size_t t = 0; t < num_observations - 1; ++t) {
+                gamma_sum = log_add(gamma_sum, gamma[t * num_states + prev_state]);
             }
+
+            // update transition matrix
+            for (std::size_t curr_state = 0; curr_state < num_states; ++curr_state) {
+                float xi_sum = -INFINITY;
+                for (std::size_t t = 0; t < num_observations - 1; ++t) {
+                    xi_sum = log_add(xi_sum, xi[t * num_states * num_states + prev_state * num_states + curr_state]);
+                }
+
+                log_transition[prev_state * num_states + curr_state] = xi_sum - gamma_sum;
+            }
+
+            // update emission matrix
+            float* p = new float[num_states]; // sum of all probability that emit k (= observations[t]) from prev_state in num_observations
+            std::fill_n(p, num_states, -INFINITY);
+
+            for (std::size_t t = 0; t < num_observations; ++t) {
+                p[observations[t]] = log_add(p[observations[t]], gamma[t * num_states + prev_state]);
+            }
+
+            for (std::size_t k = 0; k < num_states; ++k) {
+                log_emission[prev_state * num_states + k] = p[k] - gamma_sum;
+            }
+
+            delete[] p;
         }
 
         delete[] gamma;
