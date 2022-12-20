@@ -74,7 +74,7 @@ TEST(tests, viterbi_simdpp) {
     };
 
     // call viterbi algorithm
-    auto viterbi_result = simdpp::viterbi(observation, sizeof_observation, start_p, transition_p, emission_probability);
+    auto viterbi_result = vectorized::viterbi(observation, sizeof_observation, start_p, transition_p, emission_probability);
 
     int expected_result[] = { 0,     2,         2,         1, 2, 
                                 2,           1, 1, 1, 2, 
@@ -117,7 +117,7 @@ TEST(tests, viterbi_raw) {
     };
 
     // call viterbi algorithm
-    auto viterbi_result = std::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
+    auto viterbi_result = scalar::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
 
     int expected_result[] = {   1,   1, 1, 1, 1,
                                 1,   1, 1, 1, 1, 

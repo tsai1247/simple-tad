@@ -5,7 +5,7 @@
 
 using namespace std;
 
-namespace std
+namespace scalar
 {
     
 enum BiasState {
