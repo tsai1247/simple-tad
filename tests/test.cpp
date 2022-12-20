@@ -32,15 +32,15 @@ TEST(tests, di) {
 float emission_probability(float emit_value, int state)
 {
     auto sigma = 20, mu = 0;
-    if(state == simdpp::UpstreamBias)
+    if(state == vectorized::UpstreamBias)
     {
         mu = 40;
     }
-    else if(state == simdpp::DownstreamBias)
+    else if(state == vectorized::DownstreamBias)
     {
         mu = -40;
     }
-    else if(state == simdpp::NoBias)
+    else if(state == vectorized::NoBias)
     {
         mu = 0;
     }
