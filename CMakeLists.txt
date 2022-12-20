@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 
 if (BUILD_MAIN)
     add_executable(simple-tad ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-    target_include_directories(simple-tad PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src/lib)
+    target_include_directories(simple-tad PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src/lib ${CMAKE_CURRENT_SOURCE_DIR}/libsimdpp)
 endif()
 
 if (BUILD_TESTS)
@@ -33,7 +33,7 @@ if (BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
     
     add_executable(simple-tad-tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp)
-    target_include_directories(simple-tad-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src/lib)
+    target_include_directories(simple-tad-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src/lib ${CMAKE_CURRENT_SOURCE_DIR}/libsimdpp)
     
     target_link_libraries(
         simple-tad-tests
@@ -58,7 +58,7 @@ if (BUILD_BENCHMARKS)
     FetchContent_MakeAvailable(googlebenchmark)
 
     add_executable(simple-tad-benchmarks ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/benchmark.cpp)
-    target_include_directories(simple-tad-benchmarks PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src/lib)
+    target_include_directories(simple-tad-benchmarks PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/src/lib ${CMAKE_CURRENT_SOURCE_DIR}/libsimdpp)
     
     target_link_libraries(
         simple-tad-benchmarks
