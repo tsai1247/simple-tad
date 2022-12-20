@@ -1,5 +1,6 @@
 #include "lib/di.hpp"
 #include "lib/baum_welch.hpp"
+#include "lib/viterbi.hpp"
 #include <algorithm>
 #include <iostream>
 #include <string>
@@ -69,7 +70,18 @@ int main() {
         std::cout << std::endl;
     }
 
-    std::cout << "---" << std::endl;
+    auto start_viterbi = std::chrono::high_resolution_clock::now();
+
+    auto states = scalar::viterbi(di_discrete, edge_size, initial, transition, emission);
+
+    std::cout << "Viterbi states:" << std::endl;
+    for (std::size_t i = 0; i < edge_size; ++i) {
+        std::cout << states[i] << " ";
+    }
+
+    auto end_viterbi = std::chrono::high_resolution_clock::now();
+
+    std::cout << "\n---" << std::endl;
 
     delete[] data;
     delete[] di;
@@ -82,6 +94,7 @@ int main() {
     std::cout << "Read data: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_read_data - start).count() << "ns" << std::endl;
     std::cout << "Calculate di: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_calculate_di - end_read_data).count() << "ns" << std::endl;
     std::cout << "Baum-Welch: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_em - start_em).count() << "ns" << std::endl;
+    std::cout << "Viterbi: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_viterbi - start_viterbi).count() << "ns" << std::endl;
 
     return 0;
 }
