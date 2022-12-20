@@ -6,7 +6,7 @@ using namespace std;
 using namespace simdpp;
 #define PI acos(-1)
 
-namespace simdpp
+namespace vectorized
 {
     const int N = 4;
     enum BiasState {

@@ -5,16 +5,16 @@
 
 using namespace std;
 
-namespace std
+namespace scalar
 {
-    
+
 enum BiasState {
     UpstreamBias,
     DownstreamBias,
     NoBias,
 };
 
-    float emission_func(float emission_p[3][3], float di, int state)
+    float emission_func(float* emission_p, float di, int state)
     {
         int index = 0;
         float bound = 0.4;
@@ -26,7 +26,7 @@ enum BiasState {
         {
             index = 2;
         }
-        return emission_p[state][index];
+        return emission_p[state*3+index];
     }
 
     /*
@@ -40,8 +40,8 @@ enum BiasState {
     output:
         長度與DI array相同的int陣列，內容是每個DI值對應到的bias。
     */
-    int* viterbi(float* observation, size_t sizeof_observation, 
-        float* start_p, float* transition_p, float emission_p[3][3]) {
+    int* viterbi(int* observation, size_t sizeof_observation, 
+        float* start_p, float* transition_p, float* emission_p) {
         
         // 宣告V變數，V變數用來記錄當前的最佳機率與上一次迭代的最佳機率
         float V[2][3];

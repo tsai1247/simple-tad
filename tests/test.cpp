@@ -32,15 +32,15 @@ TEST(tests, di) {
 float emission_probability(float emit_value, int state)
 {
     auto sigma = 20, mu = 0;
-    if(state == simdpp::UpstreamBias)
+    if(state == vectorized::UpstreamBias)
     {
         mu = 40;
     }
-    else if(state == simdpp::DownstreamBias)
+    else if(state == vectorized::DownstreamBias)
     {
         mu = -40;
     }
-    else if(state == simdpp::NoBias)
+    else if(state == vectorized::NoBias)
     {
         mu = 0;
     }
@@ -74,7 +74,7 @@ TEST(tests, viterbi_simdpp) {
     };
 
     // call viterbi algorithm
-    auto viterbi_result = simdpp::viterbi(observation, sizeof_observation, start_p, transition_p, emission_probability);
+    auto viterbi_result = vectorized::viterbi(observation, sizeof_observation, start_p, transition_p, emission_probability);
 
     int expected_result[] = { 0,     2,         2,         1, 2, 
                                 2,           1, 1, 1, 2, 
@@ -94,11 +94,11 @@ TEST(tests, viterbi_simdpp) {
 
 TEST(tests, viterbi_raw) {
     // set input
-    float observation[] = {  50,   8,  -5, -22,   1,   3,  -20, -50, -12,   6, 
+    int observation[] = {  50,   8,  -5, -22,   1,   3,  -20, -50, -12,   6, 
                              11,  50,  50,  50,  20,  18,    7,   1,  -1,  -1, 
                              -2,  -2,  -1,  -4, -12, -39,   -7, -11, -50, -50, 
                             -50, -16, -14, -14, -50, -50,  -50, -50, -50,  10, 
-                             40,  50,  10,   2,  18,   1, -1.5,   4,   1, 0.5, 
+                             40,  50,  10,   2,  18,   1, -1,   4,   1, 0, 
                              -1, -26};
     auto sizeof_observation = 52;
 
@@ -110,14 +110,14 @@ TEST(tests, viterbi_raw) {
         0.36,   0.36,   0.28
     };
     
-    float emission_p[3][3] = {
-        {0.7,    0.1,    0.2},
-        {0.1,    0.7,    0.2},
-        {0.36,   0.36,   0.28}
+    float emission_p[3*3] = {
+        0.61, 0.14, 0.24,
+        0.57, 0.16, 0.26,
+        0.58, 0.15, 0.25,
     };
 
     // call viterbi algorithm
-    auto viterbi_result = std::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
+    auto viterbi_result = scalar::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
 
     int expected_result[] = {   1,   1, 1, 1, 1,
                                 1,   1, 1, 1, 1, 
