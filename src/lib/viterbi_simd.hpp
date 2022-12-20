@@ -6,13 +6,26 @@ using namespace std;
 using namespace simdpp;
 #define PI acos(-1)
 
-const int N = 3;
+const int N = 4;
 
 enum BiasState {
     UpstreamBias,
     DownstreamBias,
     NoBias,
 };
+
+int indexof(float value, float32<N> arr)
+{
+    int tmp_arr[N] = {0, 1, 2, 0};
+    int32<N> tmp = load(tmp_arr);
+    
+    int32<N> int_arr;
+    int_arr = cmp_neq(arr, value);
+    int_arr = add(int_arr, 1);
+    int_arr = mul_lo(int_arr, tmp);
+    int ret = reduce_add(int_arr);
+    return ret;
+}
 
 void init_path(float32<N>* V, float32<N> start_p, uint8<N>* path, float32<N> emission_p)
 {
@@ -21,38 +34,26 @@ void init_path(float32<N>* V, float32<N> start_p, uint8<N>* path, float32<N> emi
     path[0] = load(path_arr);
 }
 
-void get_path_until_t(float32<N> transition_p[3], float emission_p[3], 
+void get_path_until_t(float32<N> transition_p[N], float emission_p[N], 
     float32<N>* V, uint8<N>* path, int t)
 {
-    float prob_to_curr_st[3];
-    int path_to_curr_st[3];
-    float32<N> cur_max_prob;
-    int32<N> cur_max_path;
-    int32_t tmp_mask_arr[4] = {-1, -1, -1, 0};
-    int32<N> tmp_mask = load(tmp_mask_arr);
-    float tmp_offset_arr[4] = {0, 0, 0, 1e9};
-    float32<N> tmp_offset = load(tmp_offset_arr);
-    int tmp_arr[4] = {0, 1, 2, 0};
-    int32<N> tmp = load(tmp_arr);
+    float cur_prob[N];
+    int prev_state[N];
 
-    // 對當前要計算的cur_st，計算從每個prev_st到cur_st的可能性，只取最高的存入 best_path
-    for (int i=0; i<3; i++) {
-        auto current_prob = V[t-1];
-        current_prob = add(current_prob, transition_p[i]);
+    // 對當前要計算的 state i ，使用simd計算三個state來到此state的機率，並取其最大值
+    for (int i=0; i<N; i++) {
+        // 取得當前state最佳的機率
+        float32<N> current_prob = V[t-1];
+        current_prob = add(current_prob, transition_p[i]);  // strange
         current_prob = add(current_prob, emission_p[i]);
-        current_prob = simdpp::bit_and(current_prob, tmp_mask);
-        current_prob = sub(current_prob, tmp_offset);
-        prob_to_curr_st[i] = reduce_max(current_prob);
+        cur_prob[i] = reduce_max(current_prob);
         
-        cur_max_path = cmp_neq(current_prob, prob_to_curr_st[i]);
-        cur_max_path = add(cur_max_path, 1);
-        cur_max_path = mul_lo(cur_max_path, tmp);
-        cur_max_path = simdpp::bit_and(cur_max_path, tmp_mask);
-        path_to_curr_st[i] = reduce_add(cur_max_path);
+        // 取得最佳機率發生時的前一個state
+        prev_state[i] = indexof(cur_prob[i], current_prob);
     }
 
-    V[t] = load(prob_to_curr_st);
-    path[t] = load(path_to_curr_st);
+    V[t] = load(cur_prob);
+    path[t] = load(prev_state);
 }
 
 void printfloat(float32<N> arr)
@@ -93,21 +94,33 @@ output:
 int* viterbi(float* observation, size_t sizeof_observation, 
     float* start_p, float* transition_p, float (*emission_func)(float, int)) {
     // 前處理，將 start_p 與 transition_p 取 log
-    for(int i=0; i<N; i++)
+    float* new_start_p = (float*)malloc(N * sizeof(float));
+    for(int i=0; i<N-1; i++)
     {
-        start_p[i] = log10(start_p[i]);
+        new_start_p[i] = log10(start_p[i]);
     }
-    for(int i=0; i<N*N; i++)
+    new_start_p[N-1] = log10(1e-9);
+
+    float* new_transition_p = (float*)malloc(N*N * sizeof(float));
+    for(int i=N*N-1; i >= N*(N-1); i--)
     {
-        transition_p[i] = log10(transition_p[i]);
+        new_transition_p[i] = log10(1e-9);
+    }
+
+    for(int i=N*(N-1)-1; i>=0; i--)
+    {
+        if((i+1)%N == 0)
+            new_transition_p[i] = log10(1e-9);
+        else
+            new_transition_p[i] = log10(transition_p[i - i/N]);
     }
 
     // 將機率轉換成simdpp vector type
-    float32<N> simd_start_p = load(start_p);
+    float32<N> simd_start_p = load(new_start_p);
     float32<N>* simd_transition_p = (float32<N>*)calloc(N, sizeof(float32<N>));
     for(int i=0; i<N; i++)
     {
-        simd_transition_p[i] = load(transition_p + i*N);
+        simd_transition_p[i] = load(new_transition_p + i*N);
     }
 
     // 宣告V變數，V變數用來記錄當前的最佳機率與上一次迭代的最佳機率
@@ -118,39 +131,33 @@ int* viterbi(float* observation, size_t sizeof_observation,
     
     // Initialize
     // t == 0 的情況，V是每個state的初始機率與他們對應的的噴出機率；而path中存放的是以各個state為終點的，長度僅為1的路徑。
-    float emission_p[3];
+    float emission_p[N];
     float32<N> simd_emission_p;
-    for(int i=0; i<3; i++)
+    for(int i=0; i<N-1; i++)
     {
         emission_p[i] = log10(emission_func(observation[0], i));
     }
+    emission_p[N-1] = log10(1e-9);
     simd_emission_p = load(emission_p);
     init_path(V, simd_start_p, path, simd_emission_p);
-    printfloat(V[0]);
+
     // 迭代 t 為 1~sizeof_oberservation時的情況，每次都會尋找到當前DI值為止，以三個state為終點的最佳路徑
     for (size_t t = 1; t < sizeof_observation; t++) {
         // 對每個state計算
-        for(int i=0; i<3; i++)
+        for(int i=0; i<N-1; i++)
         {
             emission_p[i] = log10(emission_func(observation[t], i));
         }
+        emission_p[N-1] = log10(1e-9);
         simd_emission_p = load(emission_p);
         get_path_until_t(simd_transition_p, emission_p, V, path, t);
-        cout<<t<<": "; printfloat(V[t]);
     }
 
     // V[(sizeof_observation-1)%2]中存的是三個path的最大發生機率
     // 選擇最大的機率對應的path並回傳
-    auto prob = 0.0;
-    int end_state;
-    float cur_prob[3];
-    store(cur_prob, V[sizeof_observation-1]);
-    for (int i=0; i<3; i++) {
-        if (cur_prob[i] > prob || prob >= 0.0) {
-            prob = cur_prob[i];
-            end_state = i;
-        }
-    }
+    float max_end_prob = reduce_max(V[sizeof_observation-1]);
+    int end_state = indexof(max_end_prob, V[sizeof_observation-1]);
+
     int* ret = (int*)malloc(sizeof_observation* sizeof(int));
     int cur_state_arr[3];
     ret[sizeof_observation-1] = end_state;
