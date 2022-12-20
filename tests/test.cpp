@@ -1,5 +1,6 @@
 #include "baum_welch.hpp"
 #include "di.hpp"
+#include "viterbi_simd.hpp"
 #include "viterbi.hpp"
 #include "gtest/gtest.h"
 #define PI acos(-1)
@@ -28,100 +29,110 @@ TEST(tests, di) {
     delete[] di;
 }
 
-float emission_probability(float emit_value, int state) {
+float emission_probability(float emit_value, int state)
+{
     auto sigma = 20, mu = 0;
-    if (state == UpstreamBias) {
+    if(state == simdpp::UpstreamBias)
+    {
         mu = 40;
-    } else if (state == DownstreamBias) {
+    }
+    else if(state == simdpp::DownstreamBias)
+    {
         mu = -40;
-    } else if (state == NoBias) {
+    }
+    else if(state == simdpp::NoBias)
+    {
         mu = 0;
-    } else {
+    }
+    else 
+    {
         throw runtime_error("Error: impossible state");
     }
     float pow_sigma2_2times = 2 * pow(sigma, 2);
-    float pow_delta_emitvalue = -pow((emit_value - mu), 2);
+    float pow_delta_emitvalue = - pow((emit_value - mu), 2);
 
-    float ret = 1.0 / (sigma * sqrt(2 * PI)) * exp(pow_delta_emitvalue / pow_sigma2_2times);
+    float ret = 1.0 / (sigma * sqrt(2*PI)) * exp( pow_delta_emitvalue  / pow_sigma2_2times );
     return ret;
+}
+
+TEST(tests, viterbi_simdpp) {
+    // set input
+    float observation[] = {  50,   8,  -5, -22,   1,   3,  -20, -50, -12,   6, 
+                             11,  50,  50,  50,  20,  18,    7,   1,  -1,  -1, 
+                             -2,  -2,  -1,  -4, -12, -39,   -7, -11, -50, -50, 
+                            -50, -16, -14, -14, -50, -50,  -50, -50, -50,  10, 
+                             40,  50,  10,   2,  18,   1, -1.5,   4,   1, 0.5, 
+                             -1, -26};
+    auto sizeof_observation = 52;
+
+    float start_p[3] = {0.33, 0.33, 0.33};
+
+    float transition_p[3*3] = {
+        0.7,    0.1,    0.2,
+        0.1,    0.7,    0.2,
+        0.36,   0.36,   0.28
+    };
+
+    // call viterbi algorithm
+    auto viterbi_result = simdpp::viterbi(observation, sizeof_observation, start_p, transition_p, emission_probability);
+
+    int expected_result[] = { 0,     2,         2,         1, 2, 
+                                2,           1, 1, 1, 2, 
+                                0,     0,   0,   0,   0, 
+                                0,     2,         2,         2,         2, 
+                                2,           2,         2,         2,         1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 2, 
+                                0,     0,   2,         2,         2, 
+                                2,           2,         2,         2,         2, 
+                                2,           1,  };
+
+    for(int i=0; i<sizeof_observation; i++)
+        EXPECT_EQ(viterbi_result[i], expected_result[i]);
 }
 
 TEST(tests, viterbi_raw) {
     // set input
-    float observation[] = { 50, 8, -5, -22, 1, 3, -20, -50, -12, 6,
-        11, 50, 50, 50, 20, 18, 7, 1, -1, -1,
-        -2, -2, -1, -4, -12, -39, -7, -11, -50, -50,
-        -50, -16, -14, -14, -50, -50, -50, -50, -50, 10,
-        40, 50, 10, 2, 18, 1, -1.5, 4, 1, 0.5,
-        -1, -26 };
+    float observation[] = {  50,   8,  -5, -22,   1,   3,  -20, -50, -12,   6, 
+                             11,  50,  50,  50,  20,  18,    7,   1,  -1,  -1, 
+                             -2,  -2,  -1,  -4, -12, -39,   -7, -11, -50, -50, 
+                            -50, -16, -14, -14, -50, -50,  -50, -50, -50,  10, 
+                             40,  50,  10,   2,  18,   1, -1.5,   4,   1, 0.5, 
+                             -1, -26};
     auto sizeof_observation = 52;
 
-    float start_p[3] = { 0.33, 0.33, 0.33 };
+    float start_p[3] = {0.33, 0.33, 0.33};
 
-    float transition_p[3 * 3] = {
-        0.7, 0.1, 0.2,
-        0.1, 0.7, 0.2,
-        0.36, 0.36, 0.28
+    float transition_p[3*3] = {
+        0.7,    0.1,    0.2,
+        0.1,    0.7,    0.2,
+        0.36,   0.36,   0.28
+    };
+    
+    float emission_p[3][3] = {
+        {0.7,    0.1,    0.2},
+        {0.1,    0.7,    0.2},
+        {0.36,   0.36,   0.28}
     };
 
     // call viterbi algorithm
-    auto viterbi_result = viterbi(observation, sizeof_observation, start_p, transition_p, emission_probability);
+    auto viterbi_result = std::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
 
-    vector<BiasState> expected_result = {
-        UpstreamBias,
-        NoBias,
-        NoBias,
-        DownstreamBias,
-        NoBias,
-        NoBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        NoBias,
-        UpstreamBias,
-        UpstreamBias,
-        UpstreamBias,
-        UpstreamBias,
-        UpstreamBias,
-        UpstreamBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        DownstreamBias,
-        NoBias,
-        UpstreamBias,
-        UpstreamBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        NoBias,
-        DownstreamBias,
-    };
-    EXPECT_EQ(viterbi_result, expected_result);
+    int expected_result[] = {   1,   1, 1, 1, 1,
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 1, 1, 1, 
+                                1,   1, 
+                                };
+    for(int i=0; i<sizeof_observation; i++)
+        EXPECT_EQ(viterbi_result[i], expected_result[i]);
 }
 
 TEST(tests, baum_welch_scalar) {
