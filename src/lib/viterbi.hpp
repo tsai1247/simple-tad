@@ -29,9 +29,9 @@ vector<BiasState> viterbi(float* observation, size_t sizeof_observation,
     float V[2][3];
 
     // 宣告path變數，path變數用來儲存當前計算到的「以state i為終點」的最佳路徑，
-    int* path[3];
-    for(int i=0; i<3; i++)
-        path[i] = (int*)malloc(1* sizeof(int));
+    int* path[sizeof_observation];
+    for(size_t i=0; i<sizeof_observation; i++)
+        path[i] = (int*)malloc(3* sizeof(int));
 
     // Initialize
     // t == 0 的情況，V是每個state的初始機率與他們對應的的噴出機率；而path中存放的是以各個state為終點的，長度僅為1的路徑。
@@ -43,38 +43,23 @@ vector<BiasState> viterbi(float* observation, size_t sizeof_observation,
 
     // 迭代 t 為 1~sizeof_oberservation時的情況，每次都會尋找到當前DI值為止，以三個state為終點的最佳路徑
     for (size_t t = 1; t < sizeof_observation; t++) {
-        
-        // 初始化newpath，每次迭代都會使用newpath取代舊的path
-        int* newpath[3];
-        for(int i=0; i<3; i++)
-            newpath[i] = (int*)malloc(t* sizeof(int));
 
         // 對每個state計算
         for (int i=0; i<3; i++) {
             auto cur_st = static_cast<int>(i);
-            vector<pair<float, int>> paths_to_curr_st;
+            pair<float, int> paths_to_curr_st[3];
 
             // 對當前要計算的cur_st，計算從每個prev_st到cur_st的可能性，只取最高的存入 best_path
             for (int j=0; j<3; j++) {
                 auto prev_st = static_cast<int>(j);
                 auto current_prob = V[(t-1)%2][prev_st] + log10(transition_p[prev_st*3+cur_st]) + log10(emission_p(observation[t], cur_st));
-                paths_to_curr_st.push_back(make_pair(current_prob, prev_st));
+                paths_to_curr_st[j] = make_pair(current_prob, prev_st);
             }
-            sort(paths_to_curr_st.begin(), paths_to_curr_st.end());
-            auto best_path = paths_to_curr_st[paths_to_curr_st.size()-1];
+            sort(paths_to_curr_st, paths_to_curr_st + 3);
+            auto best_path = paths_to_curr_st[2];
             V[t%2][cur_st] = best_path.first;
-
-            for(int j=0; j<t; j++)
-            {
-                newpath[cur_st][j] = path[best_path.second][j];
-            }
-            newpath[cur_st][t] = cur_st;
+            path[t][i] = best_path.second;
         }
-
-        // 更新path
-        for(int i=0; i<3; i++)
-            path[i] = newpath[i];
-            
     }
 
     // V[(sizeof_observation-1)%2]中存的是三個path的最大發生機率
@@ -90,10 +75,17 @@ vector<BiasState> viterbi(float* observation, size_t sizeof_observation,
         }
     }
 
-    vector<BiasState> result;
-    for(int i=0; i<sizeof_observation; i++)
+    int* ret = (int*)malloc(sizeof_observation*sizeof(int));
+    ret[sizeof_observation-1] = end_state;
+    for(int i=sizeof_observation-2; i>=0; i--)
     {
-        result.push_back(static_cast<BiasState>(path[end_state][i]));
+        ret[i] = path[i+1][ret[i+1]];
+    }
+
+    vector<BiasState> result;
+    for(size_t i=0; i<sizeof_observation; i++)
+    {
+        result.push_back(static_cast<BiasState>(ret[i]));
     }
     return result;
 }
