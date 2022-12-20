@@ -3,9 +3,6 @@
 #include <iostream>
 #include <tuple>
 
-#define TOLERANCE 1e-7
-#define MAX_ITERS 1000
-
 float inline log_add(float x, float y) {
     if (y <= x) {
         return x + std::log1p(std::exp(y - x));
@@ -77,8 +74,10 @@ void baum_welch(
     float* initial,
     float* transition,
     float* emission,
-    const std::size_t num_states) {
-
+    const std::size_t num_states,
+    const float tolerance = 1e-7,
+    const std::size_t max_iters = 1000
+) {
     // transform initial to log space
     float* log_initial = new float[num_states];
     for (std::size_t i = 0; i < num_states; ++i) {
@@ -107,7 +106,7 @@ void baum_welch(
         }
 
         // check if the log likelihood is converged
-        if (std::abs(std::exp(new_log_likelihood) - std::exp(log_likelihood)) < TOLERANCE) {
+        if (std::abs(std::exp(new_log_likelihood) - std::exp(log_likelihood)) < tolerance) {
             std::cout << "Converged at iteration " << iter << std::endl;
 
             delete[] alpha;
@@ -119,7 +118,7 @@ void baum_welch(
         log_likelihood = new_log_likelihood;
 
         // check if the max iteration is reached
-        if (iter >= MAX_ITERS) {
+        if (iter >= max_iters) {
             std::cout << "Max iteration reached." << std::endl;
             
             delete[] alpha;
