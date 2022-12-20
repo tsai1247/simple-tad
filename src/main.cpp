@@ -49,14 +49,14 @@ int main() {
 
     std::cout << "Estimated initial probability:" << std::endl;
     for (std::size_t i = 0; i < 3; ++i) {
-        std::cout << std::setw(10) << initial[i] << " ";
+        std::cout << std::setiosflags(std::ios::fixed) << initial[i] << " ";
     }
     std::cout << std::endl;
 
     std::cout << "Estimated transition matrix:" << std::endl;
     for (std::size_t i = 0; i < 3; ++i) {
         for (std::size_t j = 0; j < 3; ++j) {
-            std::cout << std::setw(10) << transition[i * 3 + j] << " ";
+            std::cout << std::setiosflags(std::ios::fixed) << transition[i * 3 + j] << " ";
         }
         std::cout << std::endl;
     }
@@ -64,7 +64,7 @@ int main() {
     std::cout << "Estimated emission matrix:" << std::endl;
     for (std::size_t i = 0; i < 3; ++i) {
         for (std::size_t j = 0; j < 3; ++j) {
-            std::cout << std::setw(10) << emission[i * 3 + j] << " ";
+            std::cout << std::setiosflags(std::ios::fixed) << emission[i * 3 + j] << " ";
         }
         std::cout << std::endl;
     }

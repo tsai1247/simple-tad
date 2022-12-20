@@ -24,7 +24,7 @@ float* forward(
     // init the alpha matrix
     float* alpha = new float[num_states * num_observations]();
     for (std::size_t i = 0; i < num_states; ++i) {
-        alpha[i] = initial[i] * emission[i * num_states + observations[0]];
+        alpha[i] = initial[i] + emission[i * num_states + observations[0]];
     }
 
     // compute the alpha matrix
@@ -108,6 +108,8 @@ void baum_welch(
 
         // check if the log likelihood is converged
         if (std::abs(std::exp(new_log_likelihood) - std::exp(log_likelihood)) < TOLERANCE) {
+            std::cout << "Converged at iteration " << iter << std::endl;
+
             delete[] alpha;
             delete[] beta;
             break;
@@ -156,8 +158,6 @@ void baum_welch(
                     }
                 }
             }
-
-            ++iter;
         }
 
         delete[] alpha;
@@ -209,6 +209,8 @@ void baum_welch(
 
         delete[] gamma;
         delete[] xi;
+
+        ++iter;
     }
 
     // transform initial from log to normal
