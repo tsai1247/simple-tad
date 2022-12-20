@@ -44,7 +44,7 @@ int main() {
 
     auto start_em = std::chrono::high_resolution_clock::now();
     
-    baum_welch(di_discrete, edge_size, initial, transition, emission, 3);   // side effect: update initial, transition, emission
+    baum_welch(di_discrete, edge_size, initial, transition, emission, 3, 3);   // side effect: update initial, transition, emission
     auto end_em = std::chrono::high_resolution_clock::now();
 
     std::cout << "Estimated initial probability:" << std::endl;

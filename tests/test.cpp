@@ -139,7 +139,7 @@ TEST(tests, baum_welch_scalar) {
         0.2, 0.1, 0.7
     };
 
-    baum_welch(observations, 16, initial, transition, emission, 3, 1e-7, 5);
+    baum_welch(observations, 16, initial, transition, emission, 3, 3, 1e-7, 5);
 
     float* expected_initial = new float[3] { 0.625550, 0.164645, 0.209805 };
     float* expected_transition = new float[3 * 3] {

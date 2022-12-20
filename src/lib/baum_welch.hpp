@@ -75,6 +75,7 @@ void baum_welch(
     float* transition,
     float* emission,
     const std::size_t num_states,
+    const std::size_t num_emissions,
     const float tolerance = 1e-7,
     const std::size_t max_iters = 1000
 ) {
@@ -86,9 +87,11 @@ void baum_welch(
 
     // transform transition matrix and emission matrix to log space
     float* log_transition = new float[num_states * num_states];
-    float* log_emission = new float[num_states * num_states];
     for (std::size_t i = 0; i < num_states * num_states; ++i) {
         log_transition[i] = std::log1p(transition[i]);
+    }
+    float* log_emission = new float[num_states * num_emissions];
+    for (std::size_t i = 0; i < num_states * num_emissions; ++i) {
         log_emission[i] = std::log1p(emission[i]);
     }
 
@@ -194,14 +197,14 @@ void baum_welch(
             }
 
             // update emission matrix
-            float* p = new float[num_states]; // sum of all probability that emit k (= observations[t]) from prev_state in num_observations
-            std::fill_n(p, num_states, -INFINITY);
+            float* p = new float[num_emissions]; // sum of all probability that emit k (= observations[t]) from prev_state in num_observations
+            std::fill_n(p, num_emissions, -INFINITY);
 
             for (std::size_t t = 0; t < num_observations; ++t) {
                 p[observations[t]] = log_add(p[observations[t]], gamma[t * num_states + prev_state]);
             }
 
-            for (std::size_t k = 0; k < num_states; ++k) {
+            for (std::size_t k = 0; k < num_emissions; ++k) {
                 log_emission[prev_state * num_states + k] = p[k] - gamma_sum;
             }
 
@@ -222,6 +225,8 @@ void baum_welch(
     // transform transition matrix and emission matrix from log to normal
     for (std::size_t i = 0; i < num_states * num_states; ++i) {
         transition[i] = std::exp(log_transition[i]);
+    }
+    for (std::size_t i = 0; i < num_states * num_emissions; ++i) {
         emission[i] = std::exp(log_emission[i]);
     }
 
