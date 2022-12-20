@@ -22,7 +22,7 @@ const std::tuple<float*, std::size_t> read_hi_c_data(const std::string& filename
 
     std::size_t edge_size = std::max((bin1_max - bin1_min), (bin2_max - bin2_min)) / bin_size + 1;
 
-    float* data = new float[edge_size * edge_size];
+    float* data = new float[edge_size * edge_size]();
     std::string line;
 
     // skip header

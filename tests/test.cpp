@@ -22,6 +22,10 @@ TEST(tests, di) {
     for (int i = 0; i < 5; i++) {
         EXPECT_NEAR(di[i], expected_di[i], 1e-4);
     }
+
+    delete[] data;
+    delete[] expected_di;
+    delete[] di;
 }
 
 float emission_probability(float emit_value, int state)
