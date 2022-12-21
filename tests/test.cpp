@@ -136,7 +136,7 @@ TEST(tests, viterbi_raw) {
 }
 
 TEST(tests, baum_welch_scalar) {
-    int* observations = new int[16] { 0, 1, 2, 2, 1, 0, 0, 1, 2, 1, 0, 0, 1, 2, 1, 0 };
+    int* observations = new int[16] { 0, 1, 1, 1, 2, 3, 3, 2, 2, 4, 4, 0, 0, 0, 1, 1 };
 
     float* initial = new float[3] { 0.4, 0.3, 0.3 };
     float* transition = new float[3 * 3] {
@@ -144,24 +144,24 @@ TEST(tests, baum_welch_scalar) {
         0.1, 0.6, 0.3,
         0.2, 0.3, 0.5
     };
-    float* emission = new float[3 * 3] {
-        0.7, 0.2, 0.1,
-        0.1, 0.6, 0.3,
-        0.2, 0.1, 0.7
+    float* emission = new float[3 * 5] {
+        0.5, 0.1, 0.1, 0.1, 0.2,
+        0.1, 0.5, 0.1, 0.1, 0.2,
+        0.1, 0.1, 0.5, 0.1, 0.2
     };
 
-    baum_welch(observations, 16, initial, transition, emission, 3, 3, 1e-7, 5);
+    baum_welch(observations, 16, initial, transition, emission, 3, 5, 1e-7, 100);
 
-    float* expected_initial = new float[3] { 0.625550, 0.164645, 0.209805 };
+    float* expected_initial = new float[3] { 0.500094, 0.251293, 0.248612 };
     float* expected_transition = new float[3 * 3] {
-        0.417358, 0.316256, 0.264661,
-        0.276578, 0.400094, 0.324230,
-        0.295554, 0.340282, 0.365140
+        0.417835, 0.315129, 0.267037,
+        0.260414, 0.417387, 0.322199,
+        0.290338, 0.330825, 0.378838
     };
-    float* expected_emission = new float[3 * 3] {
-        0.449340, 0.370611, 0.245848,
-        0.368948, 0.419476, 0.278882,
-        0.377467, 0.412418, 0.277082
+    float* expected_emission = new float[3 * 5] {
+        0.332985, 0.267642, 0.156908, 0.116732, 0.125733,
+        0.203520, 0.385474, 0.167486, 0.123916, 0.119605,
+        0.213660, 0.279519, 0.241754, 0.134906, 0.130161
     };
 
     for (int i = 0; i < 3; i++) {
@@ -170,7 +170,7 @@ TEST(tests, baum_welch_scalar) {
     for (int i = 0; i < 3 * 3; i++) {
         EXPECT_NEAR(transition[i], expected_transition[i], 1e-4);
     }
-    for (int i = 0; i < 3 * 3; i++) {
+    for (int i = 0; i < 3 * 5; i++) {
         EXPECT_NEAR(emission[i], expected_emission[i], 1e-4);
     }
 

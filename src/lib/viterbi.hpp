@@ -14,19 +14,9 @@ enum BiasState {
     NoBias,
 };
 
-    float emission_func(float* emission_p, float di, int state)
+    float emission_func(float* emission_p, int di, int state)
     {
-        int index = 0;
-        float bound = 0.4;
-        if(di > bound)
-        {
-            index = 1;
-        }
-        else if(di < bound)
-        {
-            index = 2;
-        }
-        return emission_p[state*3+index];
+        return emission_p[state*3+di];
     }
 
     /*
@@ -76,10 +66,10 @@ enum BiasState {
                 sort(paths_to_curr_st, paths_to_curr_st + 3);
                 auto best_path = paths_to_curr_st[2];
                 V[t%2][cur_st] = best_path.first;
-                cout<<V[t%2][cur_st]<<", ";
+                // cout<<V[t%2][cur_st]<<", ";
                 path[t][i] = best_path.second;
             }
-            cout<<endl;
+            // cout<<endl;
         }
 
         // V[(sizeof_observation-1)%2]中存的是三個path的最大發生機率
