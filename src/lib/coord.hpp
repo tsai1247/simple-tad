@@ -56,7 +56,7 @@ const std::vector<std::pair<std::size_t, std::size_t>> calculate_coord(const Bia
             ++next_end;
         }
 
-        coords.emplace_back(possible_start_coords[curr_start], possible_end_coords[curr_end]);
+        coords.emplace_back(possible_start_coords[curr_start], possible_end_coords[curr_end] + 1);
 
         curr_start = next_start;
         ++next_start;
