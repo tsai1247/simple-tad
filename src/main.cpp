@@ -89,7 +89,10 @@ int main() {
     auto end_coord = std::chrono::high_resolution_clock::now();
 
     for (auto& coord : coords) {
-        std::cout << coord.first << " " << coord.second << std::endl;
+        for (std::size_t i = coord.first; i < coord.second; ++i) {
+            std::cout << states[i] << " ";
+        }
+        std::cout << "\n-" << std::endl;
     }
 
     std::cout << "---" << std::endl;

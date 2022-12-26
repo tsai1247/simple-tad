@@ -25,7 +25,7 @@ const std::vector<std::pair<std::size_t, std::size_t>> calculate_coord(const Bia
         }
     }
 
-    for (std::size_t i = 1; i < length - 1; ++i) {
+    for (std::size_t i = 0; i < length - 1; ++i) {
         if (states[i] == BiasState::DownstreamBias && (states[i + 1] == BiasState::UpstreamBias || states[i + 1] == BiasState::NoBias)) {
             possible_end_coords.push_back(i);
         }
@@ -41,7 +41,7 @@ const std::vector<std::pair<std::size_t, std::size_t>> calculate_coord(const Bia
     std::size_t curr_end = 0;
     std::size_t next_end = 1;
 
-    while (possible_start_coords[curr_start] < possible_end_coords[curr_end]) {
+    while (possible_start_coords[curr_start] > possible_end_coords[curr_end]) {
         ++curr_end;
         ++next_end;
     }
