@@ -92,7 +92,7 @@ int main() {
         std::cout << coord.first << " " << coord.second << std::endl;
     }
 
-    std::cout << "\n---" << std::endl;
+    std::cout << "---" << std::endl;
 
     delete[] data;
     delete[] di;

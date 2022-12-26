@@ -47,11 +47,11 @@ const std::vector<std::pair<std::size_t, std::size_t>> calculate_coord(const Bia
     }
 
     while (curr_start < possible_start_coords.size() - 1 && curr_end < possible_end_coords.size() - 1) {
-        while (possible_start_coords[next_start] < possible_end_coords[curr_end]) {
+        while (possible_start_coords[next_start] < possible_end_coords[curr_end] && next_start < possible_start_coords.size() - 1) {
             ++next_start;
         }
 
-        while (possible_end_coords[next_end] < possible_start_coords[next_start]) {
+        while (possible_start_coords[next_start] > possible_end_coords[next_end] && next_end < possible_end_coords.size() - 1) {
             ++curr_end;
             ++next_end;
         }
