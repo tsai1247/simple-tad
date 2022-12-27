@@ -1,4 +1,5 @@
 #include "baum_welch.hpp"
+#include "coord.hpp"
 #include "di.hpp"
 #include "types.h"
 #include "viterbi.hpp"
@@ -118,6 +119,8 @@ TEST(tests, viterbi_raw) {
     };
     for (int i = 0; i < sizeof_observation; i++)
         EXPECT_EQ(viterbi_result[i], expected_result[i]);
+
+    delete[] viterbi_result;
 }
 
 TEST(tests, baum_welch_scalar) {
@@ -163,6 +166,18 @@ TEST(tests, baum_welch_scalar) {
     delete[] initial;
     delete[] transition;
     delete[] emission;
+}
+
+TEST(tests, coord) {
+    int* state = new int[16] { 0, 0, 1, 2, 2, 0, 0, 2, 2, 1, 1, 0, 2, 0, 2, 1 };
+
+    std::vector<std::pair<std::size_t, std::size_t>> coords = calculate_coord(reinterpret_cast<BiasState*>(state), 16);
+
+    std::vector<std::pair<std::size_t, std::size_t>> expected_coords = {
+        { 0, 3 }, { 5, 11 }, { 11, 16 }
+    };
+
+    EXPECT_EQ(coords, expected_coords);
 }
 
 int main(int argc, char** argv) {
