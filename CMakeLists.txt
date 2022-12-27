@@ -33,7 +33,7 @@ if (BUILD_PYBIND11)
     set_target_properties(
         simple_tad PROPERTIES 
         POSITION_INDEPENDENT_CODE ON
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/simple-tad
     )
 endif()
 
