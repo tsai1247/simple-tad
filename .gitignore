@@ -49,3 +49,4 @@ _deps
 .vscode/
 data/
 simple-tad*
+*.pyd
