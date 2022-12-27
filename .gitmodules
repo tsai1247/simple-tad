@@ -1,3 +1,6 @@
 [submodule "libsimdpp"]
 	path = libsimdpp
 	url = https://github.com/p12tic/libsimdpp.git
+[submodule "pybind11"]
+	path = pybind11
+	url = https://github.com/pybind/pybind11.git
