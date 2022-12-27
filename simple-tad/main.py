@@ -11,8 +11,7 @@ def read_hi_c_data(filename: str, bin_size: int, bin1_min: int, bin1_max: int, b
         file.readline()
 
         # get edge size
-        edge_size = max((bin1_max - bin1_min),
-                        (bin2_max - bin2_min)) // bin_size + 1
+        edge_size = (max(bin1_max, bin2_max) - min(bin1_min, bin2_min)) // bin_size + 1
 
         # create data array
         data = np.zeros((edge_size, edge_size), dtype=np.float32)
@@ -25,9 +24,10 @@ def read_hi_c_data(filename: str, bin_size: int, bin1_min: int, bin1_max: int, b
             bin2 = int(bin2)
             rescaled_intensity = float(rescaled_intensity)
             if bin1_min <= bin1 <= bin1_max and bin2_min <= bin2 <= bin2_max:
-                row = (bin1 - bin1_min) // bin_size
-                col = (bin2 - bin2_min) // bin_size
+                row = (bin1 - min(bin1_min, bin2_min)) // bin_size
+                col = (bin2 - min(bin1_min, bin2_min)) // bin_size
                 data[row, col] = rescaled_intensity
+                data[col, row] = rescaled_intensity
             else:
                 print(
                     f'chr: {chr} bin1: {bin1} bin2: {bin2} rescaled_intensity: {rescaled_intensity} diag_offset: {diag_offset} dist: {dist}')

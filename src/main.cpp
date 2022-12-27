@@ -2,6 +2,7 @@
 #include "lib/coord.hpp"
 #include "lib/di.hpp"
 #include "lib/viterbi.hpp"
+#include "lib/read_data.hpp"
 #include <algorithm>
 #include <chrono>
 #include <iomanip>
