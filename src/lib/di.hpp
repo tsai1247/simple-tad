@@ -1,5 +1,6 @@
 #include "constants.h"
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <immintrin.h>
 #include <iostream>
@@ -8,7 +9,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <cmath>
 
 const std::tuple<float*, std::size_t> read_hi_c_data(const std::string& filename, const std::size_t& bin_size, const std::size_t& bin1_min, const std::size_t& bin1_max, const std::size_t& bin2_min, const std::size_t& bin2_max) {
     std::fstream file;
@@ -71,8 +71,8 @@ float accumulate_AVX2(const float* data, std::size_t size) {
     for (std::size_t i = 0; i < size; i += 8) {
         data_vec = _mm256_loadu_ps(data + i);
         sum_vec = _mm256_add_ps(sum_vec, data_vec);
-    }    
-    
+    }
+
     __m256 swap = _mm256_permute2f128_ps(sum_vec, sum_vec, 0x01);
     sum_vec = _mm256_add_ps(sum_vec, swap);
     sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);

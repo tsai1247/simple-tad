@@ -1,12 +1,12 @@
-#include "lib/di.hpp"
 #include "lib/baum_welch.hpp"
-#include "lib/viterbi.hpp"
 #include "lib/coord.hpp"
+#include "lib/di.hpp"
+#include "lib/viterbi.hpp"
 #include <algorithm>
-#include <iostream>
-#include <string>
 #include <chrono>
 #include <iomanip>
+#include <iostream>
+#include <string>
 
 #define DISCREATE_THRESHOLD 0.4
 
@@ -45,8 +45,8 @@ int main() {
     std::cout << "Start descrete Baum-Welch algorithm..." << std::endl;
 
     auto start_em = std::chrono::high_resolution_clock::now();
-    
-    baum_welch(di_discrete, edge_size, initial, transition, emission, 3, 3);   // side effect: update initial, transition, emission
+
+    baum_welch(di_discrete, edge_size, initial, transition, emission, 3, 3); // side effect: update initial, transition, emission
     auto end_em = std::chrono::high_resolution_clock::now();
 
     std::cout << "Estimated initial probability:" << std::endl;

@@ -50,7 +50,7 @@ float* backward(
     // init the beta matrix
     float* beta = new float[num_states * num_observations]();
     for (std::size_t i = 0; i < num_states; ++i) {
-        beta[i * num_observations + num_observations - 1] = 0;  // log(1)
+        beta[i * num_observations + num_observations - 1] = 0; // log(1)
     }
 
     // compute the beta matrix
@@ -76,8 +76,7 @@ float* compute_gamma(
     const float* alpha,
     const float* beta,
     const std::size_t num_observations,
-    const std::size_t num_states
-) {
+    const std::size_t num_states) {
     float* gamma = new float[num_states * num_observations]();
 
     for (std::size_t t = 0; t < num_observations; ++t) {
@@ -103,8 +102,7 @@ float* compute_xi(
     const float* transition,
     const float* emission,
     const std::size_t num_states,
-    const std::size_t num_emissions
-) {
+    const std::size_t num_emissions) {
     float* xi = new float[num_states * num_states * num_observations]();
 
     for (std::size_t t = 0; t < num_observations - 1; ++t) {
@@ -135,8 +133,7 @@ void baum_welch(
     const std::size_t num_states,
     const std::size_t num_emissions,
     const float tolerance = 1e-7,
-    const std::size_t max_iters = 1000
-) {
+    const std::size_t max_iters = 1000) {
     // transform initial to log space
     float* log_initial = new float[num_states];
     for (std::size_t i = 0; i < num_states; ++i) {
@@ -181,12 +178,12 @@ void baum_welch(
         // check if the max iteration is reached
         if (iter >= max_iters) {
             std::cout << "Max iteration reached." << std::endl;
-            
+
             delete[] alpha;
             delete[] beta;
             break;
         }
-        
+
         // compute gamma and xi
         auto gamma = compute_gamma(alpha, beta, num_observations, num_states);
         auto xi = compute_xi(alpha, beta, observations, num_observations, log_transition, log_emission, num_states, num_emissions);
@@ -198,7 +195,7 @@ void baum_welch(
         for (std::size_t i = 0; i < num_states; ++i) {
             log_initial[i] = gamma[i * num_observations];
         }
-        
+
         // update transition matrix
         for (std::size_t i = 0; i < num_states; ++i) {
             float denominator = -INFINITY;
