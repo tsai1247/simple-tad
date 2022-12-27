@@ -1,10 +1,12 @@
-#include "lib/di.hpp"
 #include "lib/baum_welch.hpp"
+#include "lib/coord.hpp"
+#include "lib/di.hpp"
+#include "lib/viterbi.hpp"
 #include <algorithm>
-#include <iostream>
-#include <string>
 #include <chrono>
 #include <iomanip>
+#include <iostream>
+#include <string>
 
 #define DISCREATE_THRESHOLD 0.4
 
@@ -43,8 +45,8 @@ int main() {
     std::cout << "Start descrete Baum-Welch algorithm..." << std::endl;
 
     auto start_em = std::chrono::high_resolution_clock::now();
-    
-    baum_welch(di_discrete, edge_size, initial, transition, emission, 3);   // side effect: update initial, transition, emission
+
+    baum_welch(di_discrete, edge_size, initial, transition, emission, 3, 3); // side effect: update initial, transition, emission
     auto end_em = std::chrono::high_resolution_clock::now();
 
     std::cout << "Estimated initial probability:" << std::endl;
@@ -69,6 +71,30 @@ int main() {
         std::cout << std::endl;
     }
 
+    auto start_viterbi = std::chrono::high_resolution_clock::now();
+
+    auto states = scalar::viterbi(di_discrete, edge_size, initial, transition, emission);
+
+    // std::cout << "Viterbi states:" << std::endl;
+    // for (std::size_t i = 0; i < edge_size; ++i) {
+    //     std::cout << states[i] << " ";
+    // }
+
+    auto end_viterbi = std::chrono::high_resolution_clock::now();
+
+    auto start_coord = std::chrono::high_resolution_clock::now();
+
+    auto coords = calculate_coord(reinterpret_cast<BiasState*>(states), edge_size);
+
+    auto end_coord = std::chrono::high_resolution_clock::now();
+
+    for (auto& coord : coords) {
+        for (std::size_t i = coord.first; i < coord.second; ++i) {
+            std::cout << states[i] << " ";
+        }
+        std::cout << "\n-" << std::endl;
+    }
+
     std::cout << "---" << std::endl;
 
     delete[] data;
@@ -79,9 +105,13 @@ int main() {
     delete[] transition;
     delete[] emission;
 
+    delete[] states;
+
     std::cout << "Read data: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_read_data - start).count() << "ns" << std::endl;
     std::cout << "Calculate di: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_calculate_di - end_read_data).count() << "ns" << std::endl;
     std::cout << "Baum-Welch: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_em - start_em).count() << "ns" << std::endl;
+    std::cout << "Viterbi: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_viterbi - start_viterbi).count() << "ns" << std::endl;
+    std::cout << "Calculate coord: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end_coord - start_coord).count() << "ns" << std::endl;
 
     return 0;
 }
