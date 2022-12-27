@@ -114,8 +114,8 @@ TEST(tests, viterbi_raw) {
     auto viterbi_result = scalar::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
 
     int expected_result[] = {
-        1, 2, 0, 1, 0, 1, 0, 1, 2, 0,
-        1, 2, 1, 2, 1, 2, 0, 2, 0, 1
+        0, 1, 1, 0, 2, 2, 2, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 1, 1, 1
     };
     for (int i = 0; i < sizeof_observation; i++)
         EXPECT_EQ(viterbi_result[i], expected_result[i]);

@@ -23,11 +23,11 @@ int main() {
     int* di_discrete = new int[edge_size];
     for (std::size_t i = 0; i < edge_size; i++) {
         if (di[i] > DISCREATE_THRESHOLD) {
-            di_discrete[i] = 1;
-        } else if (di[i] < -DISCREATE_THRESHOLD) {
-            di_discrete[i] = 2;
-        } else {
             di_discrete[i] = 0;
+        } else if (di[i] < -DISCREATE_THRESHOLD) {
+            di_discrete[i] = 1;
+        } else {
+            di_discrete[i] = 2;
         }
     }
 
@@ -89,12 +89,12 @@ int main() {
 
     auto end_coord = std::chrono::high_resolution_clock::now();
 
-    for (auto& coord : coords) {
-        for (std::size_t i = coord.first; i < coord.second; ++i) {
-            std::cout << states[i] << " ";
-        }
-        std::cout << "\n-" << std::endl;
-    }
+    // for (auto& coord : coords) {
+    //     for (std::size_t i = coord.first; i < coord.second; ++i) {
+    //         std::cout << states[i] << " ";
+    //     }
+    //     std::cout << "\n-" << std::endl;
+    // }
 
     std::cout << "---" << std::endl;
 

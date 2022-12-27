@@ -25,14 +25,14 @@ PYBIND11_MODULE(simple_tad, m) {
 
             auto di = calculate_di_AVX2(data, edge_size, bin_size);
             int* di_discrete = new int[edge_size];
-
+            
             for (std::size_t i = 0; i < edge_size; i++) {
                 if (di[i] > DISCREATE_THRESHOLD) {
-                    di_discrete[i] = 1;
-                } else if (di[i] < -DISCREATE_THRESHOLD) {
-                    di_discrete[i] = 2;
-                } else {
                     di_discrete[i] = 0;
+                } else if (di[i] < -DISCREATE_THRESHOLD) {
+                    di_discrete[i] = 1;
+                } else {
+                    di_discrete[i] = 2;
                 }
             }
 
@@ -50,6 +50,28 @@ PYBIND11_MODULE(simple_tad, m) {
 
             baum_welch(di_discrete, edge_size, initial, transition, emission, 3, 3); // side effect: update initial, transition, emission
 
+            std::cout << "Estimated initial probability:" << std::endl;
+            for (std::size_t i = 0; i < 3; ++i) {
+                std::cout << std::setiosflags(std::ios::fixed) << initial[i] << " ";
+            }
+            std::cout << std::endl;
+
+            std::cout << "Estimated transition matrix:" << std::endl;
+            for (std::size_t i = 0; i < 3; ++i) {
+                for (std::size_t j = 0; j < 3; ++j) {
+                    std::cout << std::setiosflags(std::ios::fixed) << transition[i * 3 + j] << " ";
+                }
+                std::cout << std::endl;
+            }
+
+            std::cout << "Estimated emission matrix:" << std::endl;
+            for (std::size_t i = 0; i < 3; ++i) {
+                for (std::size_t j = 0; j < 3; ++j) {
+                    std::cout << std::setiosflags(std::ios::fixed) << emission[i * 3 + j] << " ";
+                }
+                std::cout << std::endl;
+            }
+
             auto states = scalar::viterbi(di_discrete, edge_size, initial, transition, emission);
 
             auto coords = calculate_coord(reinterpret_cast<BiasState*>(states), edge_size);
@@ -62,6 +84,11 @@ PYBIND11_MODULE(simple_tad, m) {
             delete[] emission;
 
             delete[] states;
+
+            // coords.erase(std::remove_if(coords.begin(), coords.end(), [](const std::pair<std::size_t, std::size_t>& coord) {
+            //     return coord.second - coord.first < 10;
+            // }),
+            //     coords.end());
 
             return coords;
         },
