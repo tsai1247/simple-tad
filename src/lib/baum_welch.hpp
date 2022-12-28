@@ -160,8 +160,11 @@ void baum_welch(
 
         float new_log_likelihood = -INFINITY;
         for (std::size_t i = 0; i < num_states; ++i) {
-            new_log_likelihood = log_add(new_log_likelihood, alpha[(num_observations - 1) * num_states + i]);
+            new_log_likelihood = log_add(new_log_likelihood, alpha[i * num_observations + (num_observations - 1)]);
         }
+
+        std::cout << "log likelihood: " << log_likelihood << std::endl;
+        std::cout << "new log likelihood: " << new_log_likelihood << std::endl;
 
         // check if the log likelihood is converged
         if (std::abs(std::exp(new_log_likelihood) - std::exp(log_likelihood)) < tolerance) {
