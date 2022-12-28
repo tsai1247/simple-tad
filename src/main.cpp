@@ -17,7 +17,7 @@ int main() {
     auto& [data, edge_size] = read_hi_c_data("./data/GM12878_MboI_chr6.csv", 5000, 140000, 170590000, 160000, 170610000);
     auto end_read_data = std::chrono::high_resolution_clock::now();
 
-    auto di = calculate_di_AVX2(data, edge_size, 5000);
+    auto di = calculate_di_AVX2(data, edge_size, 40);
     auto end_calculate_di = std::chrono::high_resolution_clock::now();
 
     int* di_discrete = new int[edge_size];

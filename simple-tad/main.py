@@ -46,7 +46,7 @@ def main():
     if not os.path.exists('./output'):
         os.makedirs('./output')
 
-    LOCAL_SIZE = 500
+    LOCAL_SIZE = 800
 
     for i in range(0, edge_size, LOCAL_SIZE):
         local_data = global_data[i:i+LOCAL_SIZE, i:i+LOCAL_SIZE]
@@ -56,23 +56,35 @@ def main():
         coords = simple_tad.calculate_tad_coords(
             local_data.reshape(local_data.shape[0]**2),
             local_data.shape[0],
-            5000
+            bin_size=5000,
+            range=80,
+            discrete_threshold=2,
+            tolerance=1e-7,
+            max_iters=2500,
         )
 
         print("coords done")
+        print("---")
 
         # ensure all bins can be seen
         plt.figure(dpi=1000)
 
-        # plot heatmap and save to file
+        cmap = mpl.colors.LinearSegmentedColormap.from_list(
+            "",
+            [(1, 1, 1), (1, 0, 0)]
+        )
+        cmap.set_over((0, 0, 0))
+
         plt.imshow(
             local_data,
-            cmap=mpl.colors.LinearSegmentedColormap.from_list(
-                "",
-                [(1, 1, 1), (0.75, 0.0, 0.0)]
-            ),
-            interpolation='none'
+            cmap=cmap,
+            interpolation='none',
+            vmin=0,
+            vmax=100,
         )
+
+        # add colorbar
+        plt.colorbar(extend='max')
 
         # add TADs
         for coord in coords:
@@ -81,14 +93,11 @@ def main():
                     (coord[0], coord[0]),
                     coord[1] - coord[0],
                     coord[1] - coord[0],
-                    edgecolor='violet',
+                    edgecolor='blue',
                     facecolor='none',
                     linewidth=0.5
                 )
             )
-
-        # add colorbar
-        plt.colorbar()
 
         plt.savefig(f'./output/heatmap-{i}.png')
 
