@@ -42,13 +42,18 @@ def main():
     global_data, edge_size = read_hi_c_data(
         "./data/GM12878_MboI_chr6.csv", 5000, 140000, 170590000, 160000, 170610000)
 
+    RANGE = 40
+    DISCRETE_THRESHOLD = 4
+
     # if output folder does not exist, create it
-    if not os.path.exists('./output'):
-        os.makedirs('./output')
+    if not os.path.exists(f'./output-{RANGE}-{DISCRETE_THRESHOLD}'):
+        os.makedirs(f'./output-{RANGE}-{DISCRETE_THRESHOLD}')
 
     LOCAL_SIZE = 800
 
     for i in range(0, edge_size, LOCAL_SIZE):
+        print(f"---{i}---")
+
         local_data = global_data[i:i+LOCAL_SIZE, i:i+LOCAL_SIZE]
 
         assert local_data.shape[0] == local_data.shape[1]
@@ -57,14 +62,13 @@ def main():
             local_data.reshape(local_data.shape[0]**2),
             local_data.shape[0],
             bin_size=5000,
-            range=80,
-            discrete_threshold=2,
+            range=RANGE,
+            discrete_threshold=DISCRETE_THRESHOLD,
             tolerance=1e-7,
             max_iters=2500,
         )
 
         print("coords done")
-        print("---")
 
         # ensure all bins can be seen
         plt.figure(dpi=1000)
@@ -93,13 +97,13 @@ def main():
                     (coord[0], coord[0]),
                     coord[1] - coord[0],
                     coord[1] - coord[0],
-                    edgecolor='blue',
+                    edgecolor=(0, 0, 0, 0.2),
                     facecolor='none',
                     linewidth=0.5
                 )
             )
 
-        plt.savefig(f'./output/heatmap-{i}.png')
+        plt.savefig(f'./output-{RANGE}-{DISCRETE_THRESHOLD}/heatmap-{i}.png')
 
         plt.close()
 
