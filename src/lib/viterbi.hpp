@@ -13,6 +13,11 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
     int* hidden_states = new int[num_observation]();
     float* viterbi = new float[3* num_observation]();
 
+    float* transition_log1p = new float[3*3]();
+    for(std::size_t i = 0; i < 3*3; ++i) {
+        transition_log1p[i] = std::log1p(transition[i]);
+    }
+
     // initialize viterbi
     for (std::size_t i = 0; i < 3; ++i) {
         viterbi[i * num_observation] = std::log1p(initial[i]) + std::log1p(emission_func(emission, observations[0], i));
@@ -20,10 +25,10 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
 
     // run viterbi
     for (std::size_t t = 1; t < num_observation; ++t) {
-        for (std::size_t i = 0; i < 3; ++i) {
+        for (std::size_t i = 0; i < 3; ++i) {   // current state
             float max = -INFINITY;
-            for (std::size_t j = 0; j < 3; ++j) {
-                float temp = viterbi[j * num_observation + t - 1] + std::log1p(transition[j * 3 + i]);
+            for (std::size_t j = 0; j < 3; ++j) {   // previous state
+                float temp = viterbi[j * num_observation + t - 1] + transition_log1p[j * 3 + i];
                 if (temp > max) {
                     max = temp;
                 }
@@ -42,13 +47,13 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
     }
 
     // backtrace
-    for (int i = num_observation - 2; i >= 0; --i) {
+    for (int t = num_observation - 2; t >= 0; --t) {
         float max = -INFINITY;
-        for (std::size_t j = 0; j < 3; ++j) {
-            float temp = viterbi[j * num_observation + i] + std::log1p(transition[hidden_states[i + 1] * 3 + j]);
+        for (std::size_t j = 0; j < 3; ++j) {   // previous state
+            float temp = viterbi[j * num_observation + t] + transition_log1p[j * 3 + hidden_states[t + 1]];
             if (temp > max) {
                 max = temp;
-                hidden_states[i] = j;
+                hidden_states[t] = j;
             }
         }
     }
