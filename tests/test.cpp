@@ -51,42 +51,37 @@ float emission_probability(float emit_value, int state) {
 }
 
 TEST(tests, viterbi_simdpp) {
-    // set input
-    float observation[] = { 50, 8, -5, -22, 1, 3, -20, -50, -12, 6,
-        11, 50, 50, 50, 20, 18, 7, 1, -1, -1,
-        -2, -2, -1, -4, -12, -39, -7, -11, -50, -50,
-        -50, -16, -14, -14, -50, -50, -50, -50, -50, 10,
-        40, 50, 10, 2, 18, 1, -1.5, 4, 1, 0.5,
-        -1, -26 };
-    auto sizeof_observation = 52;
+    int observation[] = {
+        0, 1, 1, 0, 2, 2, 2, 0, 0, 1,
+        0, 0, 0, 0, 0, 0, 1, 1, 1, 1
+    };
+    auto sizeof_observation = 20;
 
     float start_p[3] = { 0.33, 0.33, 0.33 };
 
     float transition_p[3 * 3] = {
-        0.7, 0.1, 0.2,
-        0.1, 0.7, 0.2,
-        0.36, 0.36, 0.28
+        0.60, 0.15, 0.25,
+        0.35, 0.55, 0.10,
+        0.15, 0.30, 0.55
+    };
+
+    float emission_p[3 * 3] = {
+        0.70, 0.10, 0.20,
+        0.18, 0.56, 0.26,
+        0.30, 0.15, 0.55
     };
 
     // call viterbi algorithm
-    auto viterbi_result = vectorized::viterbi(observation, sizeof_observation, start_p, transition_p, emission_probability);
+    auto viterbi_result = vectorized::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
 
     int expected_result[] = {
-        0, 2, 2, 1, 2,
-        2, 1, 1, 1, 2,
-        0, 0, 0, 0, 0,
-        0, 2, 2, 2, 2,
-        2, 2, 2, 2, 1,
-        1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1,
-        1, 1, 1, 1, 2,
-        0, 0, 2, 2, 2,
-        2, 2, 2, 2, 2,
-        2, 1
+        0, 1, 1, 0, 2, 2, 2, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 1, 1, 1
     };
-
     for (int i = 0; i < sizeof_observation; i++)
         EXPECT_EQ(viterbi_result[i], expected_result[i]);
+
+    delete[] viterbi_result;
 }
 
 TEST(tests, viterbi_raw) {
