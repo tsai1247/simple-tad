@@ -66,18 +66,14 @@ float* backward(
     }
 
     // compute the beta matrix
-    for (std::size_t t = num_observations - 2;; --t) {
+    for (std::size_t t = num_observations - 1; t < num_observations; --t) {
         // now is observation t, and t is from (num_observations - 2) because we already init last observation
         for (std::size_t prev_state = 0; prev_state < num_states; ++prev_state) {
             float sum = -INFINITY;
-            for (std::size_t curr_state = 0; curr_state < num_states; ++curr_state) {
-                sum = log_add(sum, beta[curr_state * num_observations + t + 1] + transition[prev_state * num_states + curr_state] + calc_log_pB(observations[t + 1], emission[curr_state * num_emissions], emission[curr_state * num_emissions + 1])); // emission[curr_state * num_emissions + observations[t + 1]]);
+            beta[prev_state * num_observations + t - 1] = transition[prev_state * num_states + 0] + calc_log_pB(observations[t], emission[0 * num_emissions], emission[0 * num_emissions + 1]);
+            for (std::size_t curr_state = 1; curr_state < num_states; ++curr_state) {
+                beta[prev_state * num_observations + t - 1] = log_add(beta[prev_state * num_observations + t - 1], transition[prev_state * num_states + curr_state] + calc_log_pB(observations[t], emission[curr_state * num_emissions], emission[curr_state * num_emissions + 1]) + beta[curr_state * num_observations + t]); // emission[curr_state * num_emissions + observations[t + 1]]);
             }
-            beta[prev_state * num_observations + t] = sum;
-        }
-
-        if (t == 0) {
-            break;
         }
     }
 
@@ -149,21 +145,6 @@ void baum_welch(
     const float tolerance = 1e-7,
     const std::size_t max_iters = 1000
 ) {
-    // shift data to positive
-    float* shifted_observations = new float[num_observations];
-    const float* min_obs = std::min_element(observations, observations + num_observations);
-    const float* max_obs = std::max_element(observations, observations + num_observations);
-    for (std::size_t t = 0; t < num_observations; ++t) {
-        shifted_observations[t] = observations[t] + std::abs(*min_obs);
-        std::cerr << shifted_observations[t] << ' ';
-    }
-    std::cerr << std:: endl;
-    float* shifted_emission = new float[num_states * num_emissions] {
-        0, 0.5,
-        std::abs(*min_obs), 0.5,
-        std::abs(*min_obs) + std::abs(*max_obs), 0.5
-    };
-
     // transform initial to log space
     float* log_initial = new float[num_states];
     for (std::size_t i = 0; i < num_states; ++i) {
@@ -175,62 +156,45 @@ void baum_welch(
     for (std::size_t i = 0; i < num_states * num_states; ++i) {
         log_transition[i] = std::log1p(transition[i]);
     }
-    float* log_emission = new float[num_states * num_emissions];
-    for (std::size_t i = 0; i < num_states * num_emissions; ++i) {
-        log_emission[i] = std::log1p(shifted_emission[i]);
-    }
-
-    // init the likelihood of the observed data
-    float log_likelihood = -INFINITY;
+    // float* log_emission = new float[num_states * num_emissions];
+    // for (std::size_t i = 0; i < num_states * num_emissions; ++i) {
+    //     log_emission[i] = emission[i]; //std::log1p(emission[i]);
+    // }
 
     std::size_t iter = 0;
     while (true) {
-        auto alpha = forward(shifted_observations, num_observations, log_transition, log_emission, log_initial, num_states, num_emissions);
-        auto beta = backward(shifted_observations, num_observations, log_transition, log_emission, num_states, num_emissions);
+        float transition_diff = 0;
+        float emission_diff = 0;
 
-        float new_log_likelihood = -INFINITY;
-        for (std::size_t i = 0; i < num_states; ++i) {
-            new_log_likelihood = log_add(new_log_likelihood, alpha[(num_observations - 1) * num_states + i]);
-        }
-
-        std::cerr << "emissions: " << std::endl;
-        for (std::size_t t = 0; t < num_states; ++t) {
-            for (std::size_t i = 0; i < num_emissions; ++i) {
-                std::cerr << std::exp(log_emission[t * num_emissions + i]) << ' ';
-            }
-            std::cerr << std::endl;
-        }
-        std::cerr << std::endl;
-        std::cerr << std::exp(log_likelihood) << ' ' << exp(new_log_likelihood) << std::endl;
-        std::cerr << std::exp(new_log_likelihood) - std::exp(log_likelihood) << std::endl << std::endl;
-
-        // check if the log likelihood is converged
-        if (std::abs(std::exp(new_log_likelihood) - std::exp(log_likelihood)) < tolerance) {
-            std::cout << "Converged at iteration " << iter << std::endl;
-
-            delete[] alpha;
-            delete[] beta;
-            break;
-        }
-
-        // update the log likelihood
-        log_likelihood = new_log_likelihood;
+        auto alpha = forward(observations, num_observations, log_transition, emission, log_initial, num_states, num_emissions);
+        auto beta = backward(observations, num_observations, log_transition, emission, num_states, num_emissions);
 
         // check if the max iteration is reached
         if (iter >= max_iters) {
             std::cout << "Max iteration reached." << std::endl;
-            
+
             delete[] alpha;
             delete[] beta;
             break;
         }
+
+        std::cerr << "emissions: " << std::endl;
+        for (std::size_t i = 0; i < num_states; ++i) {
+            for (std::size_t j = 0; j < num_emissions; ++j) {
+                std::cerr << (emission[i * num_emissions + j]) << ' ';
+            }
+            std::cerr << std::endl;
+        }
+        std::cerr << std::endl;
         
         // compute gamma and xi
         auto gamma = compute_gamma(alpha, beta, num_observations, num_states);
-        auto xi = compute_xi(alpha, beta, shifted_observations, num_observations, log_transition, log_emission, num_states, num_emissions);
+        auto xi = compute_xi(alpha, beta, observations, num_observations, log_transition, emission, num_states, num_emissions);
 
-        delete[] alpha;
-        delete[] beta;
+        // delete[] alpha;
+        // delete[] beta;
+
+        std::cout << "CMP G X."<<std::endl;
 
         // update initial
         for (std::size_t i = 0; i < num_states; ++i) {
@@ -238,6 +202,7 @@ void baum_welch(
         }
         
         float* sum_gamma = new float[num_states];
+
         // update transition matrix
         for (std::size_t i = 0; i < num_states; ++i) {
             sum_gamma[i] = -INFINITY;
@@ -246,47 +211,53 @@ void baum_welch(
             }
 
             for (std::size_t j = 0; j < num_states; ++j) {
-                float numerator = -INFINITY;
+                float sum = -INFINITY;
                 for (std::size_t t = 0; t < num_observations - 1; ++t) {
-                    numerator = log_add(numerator, xi[i * num_states * num_observations + j * num_observations + t]);
+                    sum = log_add(sum, xi[i * num_states * num_observations + j * num_observations + t]);
                 }
 
-                log_transition[i * num_states + j] = numerator - sum_gamma[i];
+                log_transition[i * num_states + j] = sum - sum_gamma[i];
             }
         }
 
         // update emission matrix
-        for (std::size_t i = 0; i < num_states; ++i)
-            sum_gamma[i] = std::exp(sum_gamma[i]);
+        // for (std::size_t i = 0; i < num_states; ++i)
+        //     sum_gamma[i] = std::exp(sum_gamma[i]);
             
         for (std::size_t i = 0; i < num_states; ++i) {
+            sum_gamma[i] = std::exp(sum_gamma[i]);
             if (sum_gamma[i] == 0) continue;
 
-            log_emission[i * num_emissions] = 0;
-            log_emission[i * num_emissions + 1] = 0;
+            emission[i * num_emissions] = 0;
+            emission[i * num_emissions + 1] = 0;
 
             // O - mu can be negative so can't calculate sum as log without safe sum
             for (std::size_t t = 0; t < num_observations; ++t) {
                 gamma[i * num_observations + t] = std::exp(gamma[i * num_observations + t]);
-                log_emission[i * num_emissions] += gamma[i * num_observations + t] * shifted_observations[t]; // E[Observation]
+                emission[i * num_emissions] += gamma[i * num_observations + t] * observations[t]; // E[Observation]
             }
-            log_emission[i * num_emissions] /= sum_gamma[i]; // E[Observation] = mu
+            emission[i * num_emissions] /= sum_gamma[i]; // E[Observation] = mu
 
             for (std::size_t t = 0; t < num_observations; ++t)
-                log_emission[i * num_emissions + 1] += gamma[i * num_observations + t] * (shifted_observations[t] - log_emission[i * num_emissions])*(shifted_observations[t] - log_emission[i * num_emissions]); // E[ (Obs-mu)^2 ]
+                emission[i * num_emissions + 1] += gamma[i * num_observations + t] * (observations[t] - emission[i * num_emissions]) * (observations[t] - emission[i * num_emissions]); // E[ (Obs-mu)^2 ]
             
-            log_emission[i * num_emissions + 1] = std::sqrt(log_emission[i * num_emissions + 1] / sum_gamma[i]); // sigma = sqrt( E[ (Obs-mu)^2 ] )
+            emission[i * num_emissions + 1] = std::sqrt(emission[i * num_emissions + 1] / sum_gamma[i]); // sigma = sqrt( E[ (Obs-mu)^2 ] )
         }
 
-        for (std::size_t i = 0; i < num_states; ++i) {
-            for (std::size_t j = 0; j < num_emissions; ++j) {
-                log_emission[i * num_states + j] = std::log1p(log_emission[i * num_states + j]);
-            }
-        }
+        // for (std::size_t i = 0; i < num_states; ++i) {
+        //     for (std::size_t j = 0; j < num_emissions; ++j) {
+        //         log_emission[i * num_states + j] = std::log1p(log_emission[i * num_states + j]);
+        //     }
+        // }
 
         delete[] sum_gamma;
         delete[] gamma;
         delete[] xi;
+
+        // if (transition_diff < tolerance && emission_diff < tolerance) {
+        //     std::cout << "Converged at iteration " << iter << std::endl;
+        //     break;
+        // }
 
         ++iter;
     }
@@ -300,17 +271,13 @@ void baum_welch(
     for (std::size_t i = 0; i < num_states * num_states; ++i) {
         transition[i] = std::exp(log_transition[i]);
     }
-    for (std::size_t i = 0; i < num_states * num_emissions; ++i) {
-        emission[i] = std::exp(log_emission[i]);
-        if (i%2 == 0) {
-            emission[i] -= std::abs(*min_obs); // shift the mean back
-        }
-    }
+    // for (std::size_t i = 0; i < num_states * num_emissions; ++i) {
+    //     emission[i] = std::exp(log_emission[i]);
+    // }
 
     delete[] log_initial;
     delete[] log_transition;
-    delete[] log_emission;
-    delete[] shifted_observations;
+    // delete[] log_emission;
 }
 
 int main() {
@@ -321,7 +288,11 @@ int main() {
         0.1, 0.6, 0.3,
         0.2, 0.3, 0.5
     };
-    float* emission = new float[3 * 2];
+    float* emission = new float[3 * 2] {
+        -10, 0.9,
+        0, 0.9,
+        10, 0.9
+    };
 
     float* di = new float[21] { 2, 0, 1, 1, 0, -1, -1, -1.5, -2, 0, 0, 0, 1, 1.2, -1, -2, 0, 0, 0, 0, 0 };
 
