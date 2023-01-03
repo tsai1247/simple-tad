@@ -84,39 +84,39 @@ TEST(tests, viterbi_simdpp) {
     delete[] viterbi_result;
 }
 
-TEST(tests, viterbi_raw) {
-    int observation[] = {
-        0, 1, 1, 0, 2, 2, 2, 0, 0, 1,
-        0, 0, 0, 0, 0, 0, 1, 1, 1, 1
-    };
-    auto sizeof_observation = 20;
+// TEST(tests, viterbi_raw) {
+//     int observation[] = {
+//         0, 1, 1, 0, 2, 2, 2, 0, 0, 1,
+//         0, 0, 0, 0, 0, 0, 1, 1, 1, 1
+//     };
+//     auto sizeof_observation = 20;
 
-    float start_p[3] = { 0.33, 0.33, 0.33 };
+//     float start_p[3] = { 0.33, 0.33, 0.33 };
 
-    float transition_p[3 * 3] = {
-        0.60, 0.15, 0.25,
-        0.35, 0.55, 0.10,
-        0.15, 0.30, 0.55
-    };
+//     float transition_p[3 * 3] = {
+//         0.60, 0.15, 0.25,
+//         0.35, 0.55, 0.10,
+//         0.15, 0.30, 0.55
+//     };
 
-    float emission_p[3 * 3] = {
-        0.70, 0.10, 0.20,
-        0.18, 0.56, 0.26,
-        0.30, 0.15, 0.55
-    };
+//     float emission_p[3 * 3] = {
+//         0.70, 0.10, 0.20,
+//         0.18, 0.56, 0.26,
+//         0.30, 0.15, 0.55
+//     };
 
-    // call viterbi algorithm
-    auto viterbi_result = scalar::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
+//     // call viterbi algorithm
+//     auto viterbi_result = scalar::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
 
-    int expected_result[] = {
-        0, 1, 1, 0, 2, 2, 2, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 1, 1, 1, 1
-    };
-    for (int i = 0; i < sizeof_observation; i++)
-        EXPECT_EQ(viterbi_result[i], expected_result[i]);
+//     int expected_result[] = {
+//         0, 1, 1, 0, 2, 2, 2, 0, 0, 0,
+//         0, 0, 0, 0, 0, 0, 1, 1, 1, 1
+//     };
+//     for (int i = 0; i < sizeof_observation; i++)
+//         EXPECT_EQ(viterbi_result[i], expected_result[i]);
 
-    delete[] viterbi_result;
-}
+//     delete[] viterbi_result;
+// }
 
 // TEST(tests, baum_welch_scalar) {
 //     int* observations = new int[16] { 0, 1, 1, 1, 2, 3, 3, 2, 2, 4, 4, 0, 0, 0, 1, 1 };

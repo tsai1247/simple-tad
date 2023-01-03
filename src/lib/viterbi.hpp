@@ -5,17 +5,27 @@
 
 namespace scalar {
 
-float emission_func(const float* const& emission, const int& di, const int& state) {
-    return emission[state * 3 + di];
+float normal_pdf(const float& di, const float& average, const float& variance)
+{
+    static const float inv_sqrt_2pi = 0.3989422804014327;
+    float a = (di - average) / variance;
+    return inv_sqrt_2pi / variance * std::exp(-0.5f * a * a);
+}
+
+float emission_func(const float* const& emission, const float& di, const int& state) {
+    float average = emission[state * 2 + 0];
+    float variance = emission[state * 2 + 1];
+
+    return normal_pdf(di, average, variance);
 }
 
 /*
-observations: int[num_observation].  The preprocessed di values(0, 1, or 2).
+observations: float[num_observation].  The di values.
 initial: float[3].  The probabilities for init state.
 transition: float[3*3].  The probabilities for transition.  transition[i*3+j] presents "from state i to state j".
-emission: float[3*3] now.  The discrete probabilities for emission.  emission[state*3+di] presents "emit di from state",
+emission: float[3*2] now.  The (average, variance) pairs for gaussion emission function.
 */
-int* viterbi(const int* const& observations, const std::size_t& num_observation, const float* const& initial, const float* const& transition, const float* const& emission) {
+int* viterbi(const float* const& observations, const std::size_t& num_observation, const float* const& initial, const float* const& transition, const float* const& emission) {
     int* hidden_states = new int[num_observation]();    // result of the function.
     float* viterbi = new float[3* num_observation]();   // record probability for each node.
     int* prev_state = new int[3* num_observation]();    // record previous state for current node.
