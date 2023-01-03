@@ -12,6 +12,7 @@ float emission_func(const float* const& emission, const int& di, const int& stat
 int* viterbi(const int* const& observations, const std::size_t& num_observation, const float* const& initial, const float* const& transition, const float* const& emission) {
     int* hidden_states = new int[num_observation]();
     float* viterbi = new float[3* num_observation]();
+    int* prev_state = new int[3* num_observation]();
 
     float* transition_log1p = new float[3*3]();
     for(std::size_t i = 0; i < 3*3; ++i) {
@@ -31,6 +32,7 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
                 float temp = viterbi[j * num_observation + t - 1] + transition_log1p[j * 3 + i];
                 if (temp > max) {
                     max = temp;
+                    prev_state[i * num_observation + t] = j;
                 }
             }
             viterbi[i * num_observation + t] = max + std::log1p(emission_func(emission, observations[t], i));
@@ -48,14 +50,7 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
 
     // backtrace
     for (int t = num_observation - 2; t >= 0; --t) {
-        float max = -INFINITY;
-        for (std::size_t j = 0; j < 3; ++j) {   // previous state
-            float temp = viterbi[j * num_observation + t] + transition_log1p[j * 3 + hidden_states[t + 1]];
-            if (temp > max) {
-                max = temp;
-                hidden_states[t] = j;
-            }
-        }
+        hidden_states[t] = prev_state[hidden_states[t + 1] * num_observation + t + 1];
     }
 
     delete[] viterbi;
