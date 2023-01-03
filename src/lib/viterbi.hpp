@@ -30,15 +30,16 @@ int* viterbi(const float* const& observations, const std::size_t& num_observatio
     float* viterbi = new float[3* num_observation]();   // record probability for each node.
     int* prev_state = new int[3* num_observation]();    // record previous state for current node.
 
-    // calculate log1p for each transition probability.
-    float* transition_log1p = new float[3*3]();
+    // calculate log10 for each transition probability.
+    float* transition_log10 = new float[3*3]();
     for(std::size_t i = 0; i < 3*3; ++i) {
-        transition_log1p[i] = std::log1p(transition[i]);
+        transition_log10[i] = std::log10(transition[i]);
     }
 
     // initialize viterbi
     for (std::size_t i = 0; i < 3; ++i) {
-        viterbi[i * num_observation] = std::log1p(initial[i]) + std::log1p(emission_func(emission, observations[0], i));
+        viterbi[i * num_observation] = std::log10(initial[i]) + std::log10(emission_func(emission, observations[0], i));
+        prev_state[i * num_observation] = i;
     }
 
     // run viterbi
@@ -46,13 +47,13 @@ int* viterbi(const float* const& observations, const std::size_t& num_observatio
         for (std::size_t i = 0; i < 3; ++i) {   // current state
             float max = -INFINITY;
             for (std::size_t j = 0; j < 3; ++j) {   // previous state
-                float temp = viterbi[j * num_observation + t - 1] + transition_log1p[j * 3 + i];
+                float temp = viterbi[j * num_observation + t - 1] + transition_log10[j * 3 + i];
                 if (temp > max) {
                     max = temp;
                     prev_state[i * num_observation + t] = j;
                 }
             }
-            viterbi[i * num_observation + t] = max + std::log1p(emission_func(emission, observations[t], i));
+            viterbi[i * num_observation + t] = max + std::log10(emission_func(emission, observations[t], i));
         }
     }
 
@@ -72,7 +73,7 @@ int* viterbi(const float* const& observations, const std::size_t& num_observatio
 
     delete[] viterbi;
     delete[] prev_state;
-    delete[] transition_log1p;
+    delete[] transition_log10;
 
     return hidden_states;
 }
