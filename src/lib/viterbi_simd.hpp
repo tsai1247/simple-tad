@@ -4,17 +4,29 @@
 #include <vector>
 #include <simdpp/simd.h>
 
-using namespace std;
-using namespace simdpp;
-#define PI acos(-1)
-
 namespace vectorized {
 
-float emission_func(const float* const& emission, const int& di, const int& state) {
-    return emission[state * 3 + di];
+float normal_pdf(const float& di, const float& average, const float& variance)
+{
+    static const float inv_sqrt_2pi = 0.3989422804014327;
+    float a = (di - average) / variance;
+    return inv_sqrt_2pi / variance * std::exp(-0.5f * a * a);
 }
 
-int* viterbi(const int* const& observations, const std::size_t& num_observation, const float* const& initial, const float* const& transition, const float* const& emission) {
+float emission_func(const float* const& emission, const float& di, const int& state) {
+    float average = emission[state * 2 + 0];
+    float variance = emission[state * 2 + 1];
+
+    return normal_pdf(di, average, variance);
+}
+
+/*
+observations: float[num_observation].  The di values.
+initial: float[3].  The probabilities for init state.
+transition: float[3*3].  The probabilities for transition.  transition[i*3+j] presents "from state i to state j".
+emission: float[3*2] now.  The (average, variance) pairs for gaussion emission function.
+*/
+int* viterbi(const float* const& observations, const std::size_t& num_observation, const float* const& initial, const float* const& transition, const float* const& emission) {
     int* hidden_states = new int[num_observation]();
     float* viterbi = new float[3* num_observation]();
 
@@ -38,9 +50,9 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
         }
     }
 
-    float32<4>* simd_transition_log1p = new float32<4>[4]();
+    simdpp::float32<4>* simd_transition_log1p = new simdpp::float32<4>[4]();
     for(std::size_t i = 0; i < 4; ++i) {
-        simd_transition_log1p[i] = load(transition_log1p + i * 4);
+        simd_transition_log1p[i] = simdpp::load(transition_log1p + i * 4);
     }
     
     float* emission_log1p = new float[3*num_observation]();
@@ -50,33 +62,33 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
         }
     }
 
-    float32<4>* simd_emission_log1p = new float32<4>[num_observation]();
+    simdpp::float32<4>* simd_emission_log1p = new simdpp::float32<4>[num_observation]();
     for(std::size_t t = 0; t < num_observation; ++t) {
-        simd_emission_log1p[t] = load(emission_log1p + t*3);
+        simd_emission_log1p[t] = simdpp::load(emission_log1p + t*3);
     }
 
     // initialize viterbi
-    float32<4> temp = load(initial_log1p);
-    temp = add(temp, simd_emission_log1p[0]);
-    store(viterbi + 0, temp);
+    simdpp::float32<4> temp = simdpp::load(initial_log1p);
+    temp = simdpp::add(temp, simd_emission_log1p[0]);
+    simdpp::store(viterbi + 0, temp);
 
     int index_ar[4] = { 0, 1, 2, 0 };
-    int32<4> simd_index_mask = load(index_ar);
+    simdpp::int32<4> simd_index_mask = simdpp::load(index_ar);
 
     // run viterbi
     for (std::size_t t = 1; t < num_observation; ++t) {
         for (std::size_t i = 0; i < 3; ++i) {   // current state
-            float32<4> temp = load(viterbi + (t-1)*3);
-            temp = add(temp, simd_transition_log1p[i]);
+            simdpp::float32<4> temp = simdpp::load(viterbi + (t-1)*3);
+            temp = simdpp::add(temp, simd_transition_log1p[i]);
 
-            float max = reduce_max(temp);
+            float max = simdpp::reduce_max(temp);
             viterbi[t * 3 + i] = max + std::log1p(emission_func(emission, observations[t], i));
 
-            int32<4> temp2;
-            temp2 = cmp_neq(temp, max);
-            temp2 = add(temp2, 1);
-            temp2 = mul_lo(temp2, simd_index_mask);
-            prev_state[t * 3 + i] = reduce_add(temp2);
+            simdpp::int32<4> temp2;
+            temp2 = simdpp::cmp_neq(temp, max);
+            temp2 = simdpp::add(temp2, 1);
+            temp2 = simdpp::mul_lo(temp2, simd_index_mask);
+            prev_state[t * 3 + i] = simdpp::reduce_add(temp2);
         }
     }
 

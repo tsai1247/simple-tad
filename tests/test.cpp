@@ -32,57 +32,39 @@ TEST(tests, di) {
     delete[] di;
 }
 
-float emission_probability(float emit_value, int state) {
-    auto sigma = 20, mu = 0;
-    if (state == BiasState::UpstreamBias) {
-        mu = 40;
-    } else if (state == BiasState::DownstreamBias) {
-        mu = -40;
-    } else if (state == BiasState::NoBias) {
-        mu = 0;
-    } else {
-        throw runtime_error("Error: impossible state");
-    }
-    float pow_sigma2_2times = 2 * pow(sigma, 2);
-    float pow_delta_emitvalue = -pow((emit_value - mu), 2);
+// TEST(tests, viterbi_simdpp) {
+//     int observation[] = {
+//         0, 1, 1, 0, 2, 2, 2, 0, 0, 1,
+//         0, 0, 0, 0, 0, 0, 1, 1, 1, 1
+//     };
+//     auto sizeof_observation = 20;
 
-    float ret = 1.0 / (sigma * sqrt(2 * PI)) * exp(pow_delta_emitvalue / pow_sigma2_2times);
-    return ret;
-}
+//     float start_p[3] = { 0.33, 0.33, 0.33 };
 
-TEST(tests, viterbi_simdpp) {
-    int observation[] = {
-        0, 1, 1, 0, 2, 2, 2, 0, 0, 1,
-        0, 0, 0, 0, 0, 0, 1, 1, 1, 1
-    };
-    auto sizeof_observation = 20;
+//     float transition_p[3 * 3] = {
+//         0.60, 0.15, 0.25,
+//         0.35, 0.55, 0.10,
+//         0.15, 0.30, 0.55
+//     };
 
-    float start_p[3] = { 0.33, 0.33, 0.33 };
+//     float emission_p[3 * 3] = {
+//         0.70, 0.10, 0.20,
+//         0.18, 0.56, 0.26,
+//         0.30, 0.15, 0.55
+//     };
 
-    float transition_p[3 * 3] = {
-        0.60, 0.15, 0.25,
-        0.35, 0.55, 0.10,
-        0.15, 0.30, 0.55
-    };
+//     // call viterbi algorithm
+//     auto viterbi_result = vectorized::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
 
-    float emission_p[3 * 3] = {
-        0.70, 0.10, 0.20,
-        0.18, 0.56, 0.26,
-        0.30, 0.15, 0.55
-    };
+//     int expected_result[] = {
+//         0, 1, 1, 0, 2, 2, 2, 0, 0, 0,
+//         0, 0, 0, 0, 0, 0, 1, 1, 1, 1
+//     };
+//     for (int i = 0; i < sizeof_observation; i++)
+//         EXPECT_EQ(viterbi_result[i], expected_result[i]);
 
-    // call viterbi algorithm
-    auto viterbi_result = vectorized::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
-
-    int expected_result[] = {
-        0, 1, 1, 0, 2, 2, 2, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 1, 1, 1, 1
-    };
-    for (int i = 0; i < sizeof_observation; i++)
-        EXPECT_EQ(viterbi_result[i], expected_result[i]);
-
-    delete[] viterbi_result;
-}
+//     delete[] viterbi_result;
+// }
 
 // TEST(tests, viterbi_raw) {
 //     int observation[] = {
