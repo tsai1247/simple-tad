@@ -54,6 +54,8 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
     }
 
     delete[] viterbi;
+    delete[] prev_state;
+    delete[] transition_log1p;
 
     return hidden_states;
 }
