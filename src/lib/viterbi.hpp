@@ -9,11 +9,18 @@ float emission_func(const float* const& emission, const int& di, const int& stat
     return emission[state * 3 + di];
 }
 
+/*
+observations: int[num_observation].  The preprocessed di values(0, 1, or 2).
+initial: float[3].  The probabilities for init state.
+transition: float[3*3].  The probabilities for transition.  transition[i*3+j] presents "from state i to state j".
+emission: float[3*3] now.  The discrete probabilities for emission.  emission[state*3+di] presents "emit di from state",
+*/
 int* viterbi(const int* const& observations, const std::size_t& num_observation, const float* const& initial, const float* const& transition, const float* const& emission) {
-    int* hidden_states = new int[num_observation]();
-    float* viterbi = new float[3* num_observation]();
-    int* prev_state = new int[3* num_observation]();
+    int* hidden_states = new int[num_observation]();    // result of the function.
+    float* viterbi = new float[3* num_observation]();   // record probability for each node.
+    int* prev_state = new int[3* num_observation]();    // record previous state for current node.
 
+    // calculate log1p for each transition probability.
     float* transition_log1p = new float[3*3]();
     for(std::size_t i = 0; i < 3*3; ++i) {
         transition_log1p[i] = std::log1p(transition[i]);
