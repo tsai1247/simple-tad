@@ -9,7 +9,7 @@ using namespace simdpp;
 namespace vectorized {
 const int N = 4;
 
-int indexof(float value, float32<N> arr) {
+int indexof(double value, double32<N> arr) {
     int tmp_arr[N] = { 0, 1, 2, 0 };
     int32<N> tmp = load(tmp_arr);
 
@@ -21,21 +21,21 @@ int indexof(float value, float32<N> arr) {
     return ret;
 }
 
-void init_path(float32<N>* V, float32<N> start_p, uint8<N>* path, float32<N> emission_p) {
+void init_path(double32<N>* V, double32<N> start_p, uint8<N>* path, double32<N> emission_p) {
     V[0] = add(start_p, emission_p);
-    float path_arr[3] = { 0, 1, 2 };
+    double path_arr[3] = { 0, 1, 2 };
     path[0] = load(path_arr);
 }
 
-void get_path_until_t(float32<N> transition_p[N], float emission_p[N],
-    float32<N>* V, uint8<N>* path, int t) {
-    float cur_prob[N];
+void get_path_until_t(double32<N> transition_p[N], double emission_p[N],
+    double32<N>* V, uint8<N>* path, int t) {
+    double cur_prob[N];
     int prev_state[N];
 
     // 對當前要計算的 state i ，使用simd計算三個state來到此state的機率，並取其最大值
     for (int i = 0; i < N; i++) {
         // 取得當前state最佳的機率
-        float32<N> current_prob = V[t - 1];
+        double32<N> current_prob = V[t - 1];
         current_prob = add(current_prob, transition_p[i]); // strange
         current_prob = add(current_prob, emission_p[i]);
         cur_prob[i] = reduce_max(current_prob);
@@ -48,8 +48,8 @@ void get_path_until_t(float32<N> transition_p[N], float emission_p[N],
     path[t] = load(prev_state);
 }
 
-void printfloat(float32<N> arr) {
-    float ori_arr[N];
+void printdouble(double32<N> arr) {
+    double ori_arr[N];
     store(ori_arr, arr);
     cout << "[";
     for (int i = 0; i < N; i++) {
@@ -78,16 +78,16 @@ input:
 output:
     長度與DI array相同的int陣列，內容是每個DI值對應到的bias。
 */
-int* viterbi(float* observation, size_t sizeof_observation,
-    float* start_p, float* transition_p, float (*emission_func)(float, int)) {
+int* viterbi(double* observation, size_t sizeof_observation,
+    double* start_p, double* transition_p, double (*emission_func)(double, int)) {
     // 前處理，將 start_p 與 transition_p 取 log
-    float* new_start_p = (float*)malloc(N * sizeof(float));
+    double* new_start_p = (double*)malloc(N * sizeof(double));
     for (int i = 0; i < N - 1; i++) {
         new_start_p[i] = log10(start_p[i]);
     }
     new_start_p[N - 1] = log10(1e-9);
 
-    float* new_transition_p = (float*)malloc(N * N * sizeof(float));
+    double* new_transition_p = (double*)malloc(N * N * sizeof(double));
     for (int i = N * N - 1; i >= N * (N - 1); i--) {
         new_transition_p[i] = log10(1e-9);
     }
@@ -100,22 +100,22 @@ int* viterbi(float* observation, size_t sizeof_observation,
     }
 
     // 將機率轉換成simdpp vector type
-    float32<N> simd_start_p = load(new_start_p);
-    float32<N>* simd_transition_p = (float32<N>*)calloc(N, sizeof(float32<N>));
+    double32<N> simd_start_p = load(new_start_p);
+    double32<N>* simd_transition_p = (double32<N>*)calloc(N, sizeof(double32<N>));
     for (int i = 0; i < N; i++) {
         simd_transition_p[i] = load(new_transition_p + i * N);
     }
 
     // 宣告V變數，V變數用來記錄當前的最佳機率與上一次迭代的最佳機率
-    float32<N>* V = (float32<N>*)calloc(sizeof_observation, sizeof(float32<N>));
+    double32<N>* V = (double32<N>*)calloc(sizeof_observation, sizeof(double32<N>));
 
     // 宣告path變數，path變數用來儲存當前計算到的「以state i為終點」的最佳路徑，
     uint8<N>* path = (uint8<N>*)calloc(sizeof_observation, sizeof(uint8<N>));
 
     // Initialize
     // t == 0 的情況，V是每個state的初始機率與他們對應的的噴出機率；而path中存放的是以各個state為終點的，長度僅為1的路徑。
-    float emission_p[N];
-    float32<N> simd_emission_p;
+    double emission_p[N];
+    double32<N> simd_emission_p;
     for (int i = 0; i < N - 1; i++) {
         emission_p[i] = log10(emission_func(observation[0], i));
     }
@@ -136,7 +136,7 @@ int* viterbi(float* observation, size_t sizeof_observation,
 
     // V[(sizeof_observation-1)%2]中存的是三個path的最大發生機率
     // 選擇最大的機率對應的path並回傳
-    float max_end_prob = reduce_max(V[sizeof_observation - 1]);
+    double max_end_prob = reduce_max(V[sizeof_observation - 1]);
     int end_state = indexof(max_end_prob, V[sizeof_observation - 1]);
 
     int* ret = (int*)malloc(sizeof_observation * sizeof(int));

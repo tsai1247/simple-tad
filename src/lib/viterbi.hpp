@@ -5,16 +5,16 @@
 
 namespace scalar {
 
-float emission_func(const float* const& emission, const int& di, const int& state) {
+double emission_func(const double* const& emission, const int& di, const int& state) {
     return emission[state * 3 + di];
 }
 
-int* viterbi(const int* const& observations, const std::size_t& num_observation, const float* const& initial, const float* const& transition, const float* const& emission) {
+int* viterbi(const int* const& observations, const std::size_t& num_observation, const double* const& initial, const double* const& transition, const double* const& emission) {
     int* hidden_states = new int[num_observation]();
-    float* viterbi = new float[3* num_observation]();
+    double* viterbi = new double[3* num_observation]();
     int* prev_state = new int[3* num_observation]();
 
-    float* transition_log1p = new float[3*3]();
+    double* transition_log1p = new double[3*3]();
     for(std::size_t i = 0; i < 3*3; ++i) {
         transition_log1p[i] = std::log1p(transition[i]);
     }
@@ -27,9 +27,9 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
     // run viterbi
     for (std::size_t t = 1; t < num_observation; ++t) {
         for (std::size_t i = 0; i < 3; ++i) {   // current state
-            float max = -INFINITY;
+            double max = -INFINITY;
             for (std::size_t j = 0; j < 3; ++j) {   // previous state
-                float temp = viterbi[j * num_observation + t - 1] + transition_log1p[j * 3 + i];
+                double temp = viterbi[j * num_observation + t - 1] + transition_log1p[j * 3 + i];
                 if (temp > max) {
                     max = temp;
                     prev_state[i * num_observation + t] = j;
@@ -40,7 +40,7 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
     }
 
     // find the most probable state
-    float max = -INFINITY;
+    double max = -INFINITY;
     for (std::size_t i = 0; i < 3; ++i) {
         if (viterbi[i * num_observation + num_observation - 1] > max) {
             max = viterbi[i * num_observation + num_observation - 1];

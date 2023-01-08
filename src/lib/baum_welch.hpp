@@ -3,7 +3,7 @@
 #include <iostream>
 #include <tuple>
 
-float inline log_add(float x, float y) {
+double inline log_add(double x, double y) {
     if (y <= x) {
         return x + std::log1p(std::exp(y - x));
     } else {
@@ -11,16 +11,16 @@ float inline log_add(float x, float y) {
     }
 }
 
-float* forward(
+double* forward(
     const int* observations,
     const std::size_t num_observations,
-    const float* transition,
-    const float* emission,
-    const float* initial,
+    const double* transition,
+    const double* emission,
+    const double* initial,
     const std::size_t num_states,
     const std::size_t num_emissions) {
     // init the alpha matrix
-    float* alpha = new float[num_states * num_observations]();
+    double* alpha = new double[num_states * num_observations]();
     for (std::size_t i = 0; i < num_states; ++i) {
         alpha[i * num_observations] = initial[i] + emission[i * num_emissions + observations[0]];
     }
@@ -29,7 +29,7 @@ float* forward(
     for (std::size_t t = 1; t < num_observations; ++t) {
         // now is observation t, and t is from 1 because we skip init observation
         for (std::size_t curr_state = 0; curr_state < num_states; ++curr_state) {
-            float sum = -INFINITY;
+            double sum = -INFINITY;
             for (std::size_t prev_state = 0; prev_state < num_states; ++prev_state) {
                 sum = log_add(sum, alpha[prev_state * num_observations + t - 1] + transition[prev_state * num_states + curr_state]);
             }
@@ -40,15 +40,15 @@ float* forward(
     return alpha;
 }
 
-float* backward(
+double* backward(
     const int* observations,
     const std::size_t num_observations,
-    const float* transition,
-    const float* emission,
+    const double* transition,
+    const double* emission,
     const std::size_t num_states,
     const std::size_t num_emissions) {
     // init the beta matrix
-    float* beta = new float[num_states * num_observations]();
+    double* beta = new double[num_states * num_observations]();
     for (std::size_t i = 0; i < num_states; ++i) {
         beta[i * num_observations + num_observations - 1] = 0; // log(1)
     }
@@ -57,7 +57,7 @@ float* backward(
     for (std::size_t t = num_observations - 2;; --t) {
         // now is observation t, and t is from (num_observations - 2) because we already init last observation
         for (std::size_t prev_state = 0; prev_state < num_states; ++prev_state) {
-            float sum = -INFINITY;
+            double sum = -INFINITY;
             for (std::size_t curr_state = 0; curr_state < num_states; ++curr_state) {
                 sum = log_add(sum, beta[curr_state * num_observations + t + 1] + transition[prev_state * num_states + curr_state] + emission[curr_state * num_emissions + observations[t + 1]]);
             }
@@ -72,15 +72,15 @@ float* backward(
     return beta;
 }
 
-float* compute_gamma(
-    const float* alpha,
-    const float* beta,
+double* compute_gamma(
+    const double* alpha,
+    const double* beta,
     const std::size_t num_observations,
     const std::size_t num_states) {
-    float* gamma = new float[num_states * num_observations]();
+    double* gamma = new double[num_states * num_observations]();
 
     for (std::size_t t = 0; t < num_observations; ++t) {
-        float sum = -INFINITY;
+        double sum = -INFINITY;
         for (std::size_t i = 0; i < num_states; ++i) {
             gamma[i * num_observations + t] = alpha[i * num_observations + t] + beta[i * num_observations + t];
             sum = log_add(sum, gamma[i * num_observations + t]);
@@ -94,19 +94,19 @@ float* compute_gamma(
     return gamma;
 }
 
-float* compute_xi(
-    const float* alpha,
-    const float* beta,
+double* compute_xi(
+    const double* alpha,
+    const double* beta,
     const int* observations,
     const std::size_t num_observations,
-    const float* transition,
-    const float* emission,
+    const double* transition,
+    const double* emission,
     const std::size_t num_states,
     const std::size_t num_emissions) {
-    float* xi = new float[num_states * num_states * num_observations]();
+    double* xi = new double[num_states * num_states * num_observations]();
 
     for (std::size_t t = 0; t < num_observations - 1; ++t) {
-        float sum = -INFINITY;
+        double sum = -INFINITY;
         for (std::size_t i = 0; i < num_states; ++i) {
             for (std::size_t j = 0; j < num_states; ++j) {
                 xi[i * num_states * num_observations + j * num_observations + t] = alpha[i * num_observations + t] + transition[i * num_states + j] + emission[j * num_emissions + observations[t + 1]] + beta[j * num_observations + t + 1];
@@ -127,33 +127,33 @@ float* compute_xi(
 void baum_welch(
     const int* observations,
     const std::size_t num_observations,
-    float* initial,
-    float* transition,
-    float* emission,
+    double* initial,
+    double* transition,
+    double* emission,
     const std::size_t num_states,
     const std::size_t num_emissions,
-    const float tolerance = 1e-7,
+    const double tolerance = 1e-7,
     const std::size_t max_iters = 1000) {
     // transform initial to log space
-    float* log_initial = new float[num_states];
+    double* log_initial = new double[num_states];
     for (std::size_t i = 0; i < num_states; ++i) {
         log_initial[i] = std::log1p(initial[i]);
     }
 
     // transform transition matrix and emission matrix to log space
-    float* log_transition = new float[num_states * num_states];
+    double* log_transition = new double[num_states * num_states];
     for (std::size_t i = 0; i < num_states * num_states; ++i) {
         log_transition[i] = std::log1p(transition[i]);
     }
-    float* log_emission = new float[num_states * num_emissions];
+    double* log_emission = new double[num_states * num_emissions];
     for (std::size_t i = 0; i < num_states * num_emissions; ++i) {
         log_emission[i] = std::log1p(emission[i]);
     }
 
     std::size_t iter = 0;
     while (true) {
-        float transition_diff = 0;
-        float emission_diff = 0;
+        double transition_diff = 0;
+        double emission_diff = 0;
         
         auto alpha = forward(observations, num_observations, log_transition, log_emission, log_initial, num_states, num_emissions);
         auto beta = backward(observations, num_observations, log_transition, log_emission, num_states, num_emissions);
@@ -181,13 +181,13 @@ void baum_welch(
 
         // update transition matrix
         for (std::size_t i = 0; i < num_states; ++i) {
-            float denominator = -INFINITY;
+            double denominator = -INFINITY;
             for (std::size_t t = 0; t < num_observations - 1; ++t) {
                 denominator = log_add(denominator, gamma[i * num_observations + t]);
             }
 
             for (std::size_t j = 0; j < num_states; ++j) {
-                float numerator = -INFINITY;
+                double numerator = -INFINITY;
                 for (std::size_t t = 0; t < num_observations - 1; ++t) {
                     numerator = log_add(numerator, xi[i * num_states * num_observations + j * num_observations + t]);
                 }
@@ -200,13 +200,13 @@ void baum_welch(
 
         // update emission matrix
         for (std::size_t i = 0; i < num_states; ++i) {
-            float denominator = -INFINITY;
+            double denominator = -INFINITY;
             for (std::size_t t = 0; t < num_observations; ++t) {
                 denominator = log_add(denominator, gamma[i * num_observations + t]);
             }
 
             for (std::size_t k = 0; k < num_emissions; ++k) {
-                float numerator = -INFINITY;
+                double numerator = -INFINITY;
                 for (std::size_t t = 0; t < num_observations; ++t) {
                     if (observations[t] == int(k)) {
                         numerator = log_add(numerator, gamma[i * num_observations + t]);

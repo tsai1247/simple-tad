@@ -64,8 +64,8 @@ def main():
             bin_size=5000,
             range=RANGE,
             discrete_threshold=DISCRETE_THRESHOLD,
-            tolerance=5e-6,
-            max_iters=2500,
+            tolerance=1e-2,
+            max_iters=10,
         )
 
         print("coords done")
