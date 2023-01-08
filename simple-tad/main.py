@@ -42,8 +42,8 @@ def main():
     global_data, edge_size = read_hi_c_data(
         "./data/GM12878_MboI_chr6.csv", 5000, 140000, 170590000, 160000, 170610000)
 
-    RANGE = 200
-    DISCRETE_THRESHOLD = 8
+    RANGE = 400
+    DISCRETE_THRESHOLD = 0.4
 
     # if output folder does not exist, create it
     if not os.path.exists(f'./output-{RANGE}-{DISCRETE_THRESHOLD}'):
