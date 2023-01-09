@@ -16,7 +16,7 @@ def read_hi_c_data(filename: str, bin_size: int, bin1_min: int, bin1_max: int, b
                      min(bin1_min, bin2_min)) // bin_size + 1
 
         # create data array
-        data = np.zeros((edge_size, edge_size), dtype=np.float32)
+        data = np.zeros((edge_size, edge_size), dtype=np.float64)
 
         # read data
         for line in file:
