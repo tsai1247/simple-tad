@@ -57,19 +57,21 @@ const std::tuple<const double, const double*> forward(
         }
     }
 
-    // compute log likelihood
-    double log_likelihood = -INFINITY;
+    // compute the probability of the observation sequence
+    double alpha_sum = -INFINITY;
     double* buf = new double[num_states];
 
     for (std::size_t i = 0; i < num_states; ++i) {
         buf[i] = alpha[i * num_observations + num_observations - 1];
     }
 
-    log_likelihood = log_sum(buf, num_states);
+    alpha_sum = log_sum(buf, num_states);
 
     delete[] buf;
 
-    return std::make_tuple(log_likelihood, alpha);
+    std::cout << "alpha_sum: " << alpha_sum << std::endl;
+
+    return std::make_tuple(alpha_sum, alpha);
 }
 
 const double* backward(
@@ -112,15 +114,15 @@ const double* compute_gamma(
     double* gamma = new double[num_states * num_observations]();
 
     for (std::size_t t = 0; t < num_observations; ++t) {
-        double sum = -INFINITY;
+        double* buf = new double[num_states];
         for (std::size_t i = 0; i < num_states; ++i) {
-            gamma[i * num_observations + t] = alpha[i * num_observations + t] + beta[i * num_observations + t];
-            sum = log_add(sum, gamma[i * num_observations + t]);
+            buf[i] = alpha[i * num_observations + t] + beta[i * num_observations + t];
         }
-
+        double sum = log_sum(buf, num_states);
         for (std::size_t i = 0; i < num_states; ++i) {
-            gamma[i * num_observations + t] -= sum;
+            gamma[i * num_observations + t] = buf[i] - sum;
         }
+        delete[] buf;
     }
 
     return gamma;
@@ -128,6 +130,7 @@ const double* compute_gamma(
 
 const double* compute_xi(
     const double* alpha,
+    const double alpha_sum,
     const double* beta,
     const int* observations,
     const std::size_t num_observations,
@@ -138,19 +141,21 @@ const double* compute_xi(
     double* xi = new double[num_states * num_states * num_observations]();
 
     for (std::size_t t = 0; t < num_observations - 1; ++t) {
-        double sum = -INFINITY;
+        double* buf = new double[num_states*num_states];
         for (std::size_t i = 0; i < num_states; ++i) {
             for (std::size_t j = 0; j < num_states; ++j) {
-                xi[i * num_states * num_observations + j * num_observations + t] = alpha[i * num_observations + t] + transition[i * num_states + j] + emission[j * num_emissions + observations[t + 1]] + beta[j * num_observations + t + 1];
-                sum = log_add(sum, xi[i * num_states * num_observations + j * num_observations + t]);
+                buf[i * num_states + j] = alpha[i * num_observations + t] + transition[i * num_states + j] + emission[j * num_emissions + observations[t + 1]] + beta[j * num_observations + t + 1];
             }
         }
 
+        double sum = log_sum(buf, num_states * num_states);
         for (std::size_t i = 0; i < num_states; ++i) {
             for (std::size_t j = 0; j < num_states; ++j) {
-                xi[i * num_states * num_observations + j * num_observations + t] -= sum;
+                xi[i * num_states * num_observations + j * num_observations + t] = buf[i * num_states + j] - sum;
             }
         }
+
+        delete[] buf;
     }
 
     return xi;
@@ -183,9 +188,9 @@ void baum_welch(
     }
 
     std::size_t iter = 0;
-    while (true) {        
-        double last_log_likelihood = -INFINITY;
-        auto& [log_likelihood, alpha] = forward(observations, num_observations, log_transition, log_emission, log_initial, num_states, num_emissions);
+    double previous_alpha_sum = -INFINITY;
+    while (true) {
+        auto& [alpha_sum, alpha] = forward(observations, num_observations, log_transition, log_emission, log_initial, num_states, num_emissions);
         auto beta = backward(observations, num_observations, log_transition, log_emission, num_states, num_emissions);
 
         // check if the max iteration is reached
@@ -199,7 +204,7 @@ void baum_welch(
 
         // compute gamma and xi
         auto gamma = compute_gamma(alpha, beta, num_observations, num_states);
-        auto xi = compute_xi(alpha, beta, observations, num_observations, log_transition, log_emission, num_states, num_emissions);
+        auto xi = compute_xi(alpha, alpha_sum, beta, observations, num_observations, log_transition, log_emission, num_states, num_emissions);
 
         delete[] alpha;
         delete[] beta;
@@ -248,10 +253,11 @@ void baum_welch(
         delete[] gamma;
         delete[] xi;
 
-        if (std::abs(std::exp(log_likelihood) - std::exp(last_log_likelihood)) < tolerance) {
+        if (std::abs(alpha_sum - previous_alpha_sum) < tolerance) {
             std::cout << "Converged at iteration " << iter << std::endl;
             break;
         }
+        previous_alpha_sum = alpha_sum;
 
         ++iter;
     }

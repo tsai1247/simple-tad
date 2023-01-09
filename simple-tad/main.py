@@ -65,7 +65,7 @@ def main():
             range=RANGE,
             discrete_threshold=DISCRETE_THRESHOLD,
             tolerance=1e-2,
-            max_iters=10,
+            max_iters=100,
         )
 
         print("coords done")
