@@ -64,12 +64,9 @@ const std::tuple<const double, const double*> forward(
     for (std::size_t i = 0; i < num_states; ++i) {
         buf[i] = alpha[i * num_observations + num_observations - 1];
     }
-
     alpha_sum = log_sum(buf, num_states);
 
     delete[] buf;
-
-    std::cout << "alpha_sum: " << alpha_sum << std::endl;
 
     return std::make_tuple(alpha_sum, alpha);
 }
