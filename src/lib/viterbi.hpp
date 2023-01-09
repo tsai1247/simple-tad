@@ -16,12 +16,12 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
 
     double* transition_log1p = new double[3*3]();
     for(std::size_t i = 0; i < 3*3; ++i) {
-        transition_log1p[i] = std::log1p(transition[i]);
+        transition_log1p[i] = std::log(transition[i]);
     }
 
     // initialize viterbi
     for (std::size_t i = 0; i < 3; ++i) {
-        viterbi[i * num_observation] = std::log1p(initial[i]) + std::log1p(emission_func(emission, observations[0], i));
+        viterbi[i * num_observation] = std::log(initial[i]) + std::log(emission_func(emission, observations[0], i));
     }
 
     // run viterbi
@@ -35,7 +35,7 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
                     prev_state[i * num_observation + t] = j;
                 }
             }
-            viterbi[i * num_observation + t] = max + std::log1p(emission_func(emission, observations[t], i));
+            viterbi[i * num_observation + t] = max + std::log(emission_func(emission, observations[t], i));
         }
     }
 
