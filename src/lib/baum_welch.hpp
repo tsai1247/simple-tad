@@ -174,17 +174,17 @@ void baum_welch(
     // transform initial to log space
     double* log_initial = new double[num_states];
     for (std::size_t i = 0; i < num_states; ++i) {
-        log_initial[i] = std::log1p(initial[i]);
+        log_initial[i] = std::log(initial[i]);
     }
 
     // transform transition matrix and emission matrix to log space
     double* log_transition = new double[num_states * num_states];
     for (std::size_t i = 0; i < num_states * num_states; ++i) {
-        log_transition[i] = std::log1p(transition[i]);
+        log_transition[i] = std::log(transition[i]);
     }
     double* log_emission = new double[num_states * num_emissions];
     for (std::size_t i = 0; i < num_states * num_emissions; ++i) {
-        log_emission[i] = std::log1p(emission[i]);
+        log_emission[i] = std::log(emission[i]);
     }
 
     std::size_t iter = 0;
