@@ -193,15 +193,6 @@ void baum_welch(
         auto& [alpha_sum, alpha] = forward(observations, num_observations, log_transition, log_emission, log_initial, num_states, num_emissions);
         auto beta = backward(observations, num_observations, log_transition, log_emission, num_states, num_emissions);
 
-        // check if the max iteration is reached
-        if (iter >= max_iters) {
-            std::cout << "Max iteration reached." << std::endl;
-
-            delete[] alpha;
-            delete[] beta;
-            break;
-        }
-
         // compute gamma and xi
         auto gamma = compute_gamma(alpha, beta, num_observations, num_states);
         auto xi = compute_xi(alpha, alpha_sum, beta, observations, num_observations, log_transition, log_emission, num_states, num_emissions);
@@ -252,6 +243,15 @@ void baum_welch(
 
         delete[] gamma;
         delete[] xi;
+
+        // check if the max iteration is reached
+        if (iter >= max_iters) {
+            std::cout << "Max iteration reached." << std::endl;
+
+            delete[] alpha;
+            delete[] beta;
+            break;
+        }
 
         if (std::abs(alpha_sum - previous_alpha_sum) < tolerance) {
             std::cout << "Converged at iteration " << iter << std::endl;
