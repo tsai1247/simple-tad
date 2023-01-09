@@ -90,11 +90,15 @@ double emission_probability(double emit_value, int state) {
 // }
 
 TEST(tests, viterbi_raw) {
-    int observation[] = {
-        0, 1, 1, 0, 2, 2, 2, 0, 0, 1,
-        0, 0, 0, 0, 0, 0, 1, 1, 1, 1
+    float observation[] = {
+        50,    8,  -5, -22,   1,   3,  -20, -50, -12,   6, 
+        11,   50,  50,  50,  20,  18,    7,   1,  -1,  -1, 
+        -2,   -2,  -1,  -4, -12, -39,   -7, -11, -50, -50, 
+        -50, -16, -14, -14, -50, -50,  -50, -50, -50,  10, 
+         40,  50,  10,   2,  18,   1, -1.5,   4,   1, 0.5, 
+         -1, -26
     };
-    auto sizeof_observation = 20;
+    auto sizeof_observation = 52;
 
     double start_p[3] = { 0.33, 0.33, 0.33 };
 

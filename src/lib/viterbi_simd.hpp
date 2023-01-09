@@ -1,10 +1,8 @@
+#include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <vector>
 #include <simdpp/simd.h>
-
-using namespace std;
-using namespace simdpp;
-#define PI acos(-1)
 
 namespace vectorized {
 const int N = 4;
@@ -68,15 +66,10 @@ void printint(int32<N> arr) {
 }
 
 /*
-input:
-    observation: DI array
-    sizeof_observation: DI array 的長度
-    start_p: 初始機率陣列，通常是array[3]對應三個狀態的機率
-    transition_p: 轉移機率陣列，通常是array[3*3]，較特別的是，array[i*3+j]存放的是state j到state i的機率。
-    emission_p: 噴出機率，會是個function，傳入當前state與當前DI值，回傳的是當前state理論上噴出該值的機率。
-
-output:
-    長度與DI array相同的int陣列，內容是每個DI值對應到的bias。
+observations: float[num_observation].  The di values.
+initial: float[3].  The probabilities for init state.
+transition: float[3*3].  The probabilities for transition.  transition[i*3+j] presents "from state i to state j".
+emission: float[3*2] now.  The (average, variance) pairs for gaussion emission function.
 */
 int* viterbi(double* observation, size_t sizeof_observation,
     double* start_p, double* transition_p, double (*emission_func)(double, int)) {
@@ -85,18 +78,23 @@ int* viterbi(double* observation, size_t sizeof_observation,
     for (int i = 0; i < N - 1; i++) {
         new_start_p[i] = log10(start_p[i]);
     }
-    new_start_p[N - 1] = log10(1e-9);
+    initial_log10[3] = -1000;
 
     double* new_transition_p = (double*)malloc(N * N * sizeof(double));
     for (int i = N * N - 1; i >= N * (N - 1); i--) {
         new_transition_p[i] = log10(1e-9);
     }
 
-    for (int i = N * (N - 1) - 1; i >= 0; i--) {
-        if ((i + 1) % N == 0)
-            new_transition_p[i] = log10(1e-9);
-        else
-            new_transition_p[i] = log10(transition_p[i - i / N]);
+    simdpp::float32<4>* simd_transition_log10 = new simdpp::float32<4>[4]();
+    for(std::size_t i = 0; i < 4; ++i) {
+        simd_transition_log10[i] = simdpp::load(transition_log10 + i * 4);
+    }
+    
+    float* emission_log10 = new float[3*num_observation]();
+    for(std::size_t t = 0; t < num_observation; ++t) {
+        for(std::size_t i = 0; i < 3; ++i) {
+            emission_log10[t*3 + i] = std::log10(emission_func(emission, observations[t], i));
+        }
     }
 
     // 將機率轉換成simdpp vector type
@@ -109,8 +107,11 @@ int* viterbi(double* observation, size_t sizeof_observation,
     // 宣告V變數，V變數用來記錄當前的最佳機率與上一次迭代的最佳機率
     double32<N>* V = (double32<N>*)calloc(sizeof_observation, sizeof(double32<N>));
 
-    // 宣告path變數，path變數用來儲存當前計算到的「以state i為終點」的最佳路徑，
-    uint8<N>* path = (uint8<N>*)calloc(sizeof_observation, sizeof(uint8<N>));
+    // run viterbi
+    for (std::size_t t = 1; t < num_observation; ++t) {
+        for (std::size_t i = 0; i < 3; ++i) {   // current state
+            simdpp::float32<4> temp = simdpp::load(viterbi + (t-1)*3);
+            temp = simdpp::add(temp, simd_transition_log10[i]);
 
     // Initialize
     // t == 0 的情況，V是每個state的初始機率與他們對應的的噴出機率；而path中存放的是以各個state為終點的，長度僅為1的路徑。
@@ -119,19 +120,14 @@ int* viterbi(double* observation, size_t sizeof_observation,
     for (int i = 0; i < N - 1; i++) {
         emission_p[i] = log10(emission_func(observation[0], i));
     }
-    emission_p[N - 1] = log10(1e-9);
-    simd_emission_p = load(emission_p);
-    init_path(V, simd_start_p, path, simd_emission_p);
 
-    // 迭代 t 為 1~sizeof_oberservation時的情況，每次都會尋找到當前DI值為止，以三個state為終點的最佳路徑
-    for (size_t t = 1; t < sizeof_observation; t++) {
-        // 對每個state計算
-        for (int i = 0; i < N - 1; i++) {
-            emission_p[i] = log10(emission_func(observation[t], i));
+    // find the most probable state
+    float max = -INFINITY;
+    for (std::size_t i = 0; i < 3; ++i) {
+        if (viterbi[(num_observation-1) * 3 + i] > max) {
+            max = viterbi[(num_observation-1) * 3 + i];
+            hidden_states[num_observation - 1] = i;
         }
-        emission_p[N - 1] = log10(1e-9);
-        simd_emission_p = load(emission_p);
-        get_path_until_t(simd_transition_p, emission_p, V, path, t);
     }
 
     // V[(sizeof_observation-1)%2]中存的是三個path的最大發生機率
@@ -149,6 +145,8 @@ int* viterbi(double* observation, size_t sizeof_observation,
         cur_state = ret[i];
     }
 
-    return ret;
+    delete[] viterbi;
+
+    return hidden_states;
 }
 }
