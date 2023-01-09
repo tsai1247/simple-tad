@@ -31,13 +31,13 @@ int main() {
         }
     }
 
-    float* initial = new float[3] { 0.4, 0.3, 0.3 };
-    float* transition = new float[3 * 3] {
+    double* initial = new double[3] { 0.4, 0.3, 0.3 };
+    double* transition = new double[3 * 3] {
         0.7, 0.2, 0.1,
         0.1, 0.6, 0.3,
         0.2, 0.3, 0.5
     };
-    float* emission = new float[3 * 3] {
+    double* emission = new double[3 * 3] {
         0.7, 0.2, 0.1,
         0.1, 0.6, 0.3,
         0.2, 0.1, 0.7
