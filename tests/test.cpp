@@ -4,6 +4,8 @@
 #include "types.h"
 #include "viterbi.hpp"
 #include "viterbi_simd.hpp"
+#include "viterbi_gaussion.hpp"
+#include "viterbi_gaussion_simd.hpp"
 #include "gtest/gtest.h"
 
 #define PI acos(-1)
@@ -33,6 +35,93 @@ TEST(tests, di) {
 }
 
 TEST(tests, viterbi_simdpp) {
+    int observation[] = {
+        0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+        0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 
+        2, 2, 2, 1, 1, 1, 1, 1, 1, 1,  
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 
+        0, 0, 0, 2, 0, 2, 2, 1, 2, 2, 
+        2, 1, 
+    };
+    auto sizeof_observation = 52;
+
+    double start_p[3] = { 0.33, 0.33, 0.33 };
+ 
+    double transition_p[3 * 3] = {
+        0.70, 0.10, 0.20,
+        0.10, 0.70, 0.20,
+        0.36, 0.36, 0.28
+    };
+
+    double emission_p[3*3] = {
+        0.955430, 0.008855, 0.035715,
+        0.011420, 0.972190, 0.016390,
+        0.297329, 0.188659, 0.514012,
+    };
+
+    // call viterbi algorithm
+    auto viterbi_result = vectorized::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
+    
+    int expected_result[] = {
+        0, 0, 1, 1, 1, 2, 1, 1, 1, 0, 
+        0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 
+        2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 
+        0, 0, 0, 2, 0, 2, 2, 1, 2, 2, 
+        2, 1
+    };
+    for (int i = 0; i < sizeof_observation; i++) {
+        // printf("%d ", viterbi_result[i]);
+        EXPECT_EQ(viterbi_result[i], expected_result[i]);
+    }
+    printf("\n");
+    delete[] viterbi_result;
+}
+TEST(tests, viterbi_raw) {
+    int observation[] = {
+        0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+        0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 
+        2, 2, 2, 1, 1, 1, 1, 1, 1, 1,  
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 
+        0, 0, 0, 2, 0, 2, 2, 1, 2, 2, 
+        2, 1, 
+    };
+    auto sizeof_observation = 52;
+
+    double start_p[3] = { 0.33, 0.33, 0.33 };
+ 
+    double transition_p[3 * 3] = {
+        0.70, 0.10, 0.20,
+        0.10, 0.70, 0.20,
+        0.36, 0.36, 0.28
+    };
+
+    double emission_p[3*3] = {
+        0.955430, 0.008855, 0.035715,
+        0.011420, 0.972190, 0.016390,
+        0.297329, 0.188659, 0.514012,
+    };
+
+    // call viterbi algorithm
+    auto viterbi_result = scalar::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
+    
+    int expected_result[] = {
+        0, 0, 1, 1, 1, 2, 1, 1, 1, 0, 
+        0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 
+        2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 
+        0, 0, 0, 2, 0, 2, 2, 1, 2, 2, 
+        2, 1
+    };
+    for (int i = 0; i < sizeof_observation; i++) {
+        // printf("%d ", viterbi_result[i]);
+        EXPECT_EQ(viterbi_result[i], expected_result[i]);
+    }
+    printf("\n");
+    delete[] viterbi_result;
+}
+
+TEST(tests, viterbi_simdpp_gaussion) {
     double observation[] = {
         50,    8,  -5, -22,   1,   3,  -20, -50, -12,   6, 
         11,   50,  50,  50,  20,  18,    7,   1,  -1,  -1, 
@@ -58,7 +147,7 @@ TEST(tests, viterbi_simdpp) {
     };
 
     // call viterbi algorithm
-    auto viterbi_result = vectorized::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
+    auto viterbi_result = vectorized::viterbi_gaussion(observation, sizeof_observation, start_p, transition_p, emission_p);
 
     int expected_result[] = {
         0, 2, 2, 1, 2, 2, 1, 1, 1, 2, 
@@ -75,7 +164,7 @@ TEST(tests, viterbi_simdpp) {
     delete[] viterbi_result;
 }
 
-TEST(tests, viterbi_raw) {
+TEST(tests, viterbi_raw_gaussion) {
     double observation[] = {
         50,    8,  -5, -22,   1,   3,  -20, -50, -12,   6, 
         11,   50,  50,  50,  20,  18,    7,   1,  -1,  -1, 
@@ -101,7 +190,7 @@ TEST(tests, viterbi_raw) {
     };
 
     // call viterbi algorithm
-    auto viterbi_result = scalar::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
+    auto viterbi_result = scalar::viterbi_gaussion(observation, sizeof_observation, start_p, transition_p, emission_p);
     
     int expected_result[] = {
         0, 2, 2, 1, 2, 2, 1, 1, 1, 2, 
