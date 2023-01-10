@@ -33,7 +33,7 @@ TEST(tests, di) {
 }
 
 TEST(tests, viterbi_simdpp) {
-    float observation[] = {
+    double observation[] = {
         50,    8,  -5, -22,   1,   3,  -20, -50, -12,   6, 
         11,   50,  50,  50,  20,  18,    7,   1,  -1,  -1, 
         -2,   -2,  -1,  -4, -12, -39,   -7, -11, -50, -50, 
@@ -43,15 +43,15 @@ TEST(tests, viterbi_simdpp) {
     };
     auto sizeof_observation = 52;
 
-    float start_p[3] = { 0.33, 0.33, 0.33 };
+    double start_p[3] = { 0.33, 0.33, 0.33 };
  
-    float transition_p[3 * 3] = {
+    double transition_p[3 * 3] = {
         0.70, 0.10, 0.20,
         0.10, 0.70, 0.20,
         0.36, 0.36, 0.28
     };
 
-    float emission_p[2 * 3] = {
+    double emission_p[2 * 3] = {
          40, 20,
         -40, 20,
           0, 20,
@@ -76,7 +76,7 @@ TEST(tests, viterbi_simdpp) {
 }
 
 TEST(tests, viterbi_raw) {
-    float observation[] = {
+    double observation[] = {
         50,    8,  -5, -22,   1,   3,  -20, -50, -12,   6, 
         11,   50,  50,  50,  20,  18,    7,   1,  -1,  -1, 
         -2,   -2,  -1,  -4, -12, -39,   -7, -11, -50, -50, 
@@ -86,15 +86,15 @@ TEST(tests, viterbi_raw) {
     };
     auto sizeof_observation = 52;
 
-    float start_p[3] = { 0.33, 0.33, 0.33 };
+    double start_p[3] = { 0.33, 0.33, 0.33 };
  
-    float transition_p[3 * 3] = {
+    double transition_p[3 * 3] = {
         0.70, 0.10, 0.20,
         0.10, 0.70, 0.20,
         0.36, 0.36, 0.28
     };
 
-    float emission_p[2 * 3] = {
+    double emission_p[2 * 3] = {
          40, 20,
         -40, 20,
           0, 20,
