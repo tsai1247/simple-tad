@@ -32,54 +32,54 @@ int* viterbi_gaussion(const double* const& observations, const std::size_t& num_
 
     int* prev_state = new int[3* num_observation]();
     
-    double* initial_log10 = new double[4]();
+    double* initial_log = new double[4]();
     for(std::size_t i = 0; i < 3; ++i) {
-        initial_log10[i] = std::log10(initial[i]);
+        initial_log[i] = std::log(initial[i]);
     }
-    initial_log10[3] = -1000;
+    initial_log[3] = -1000;
 
-    double* transition_log10 = new double[4*4]();
+    double* transition_log = new double[4*4]();
     for(std::size_t i = 0; i < 4*4; ++i) {
         if ((i + 1) % 4 == 0 || i >= 12)
-            transition_log10[i] = -1000;
+            transition_log[i] = -1000;
         else
         {
             int origin_i = i - i / 4;
             origin_i = origin_i%3*3+origin_i/3;
-            transition_log10[i] = log10(transition[origin_i]);
+            transition_log[i] = log(transition[origin_i]);
         }
     }
 
-    simdpp::float64<4>* simd_transition_log10 = new simdpp::float64<4>[4]();
+    simdpp::float64<4>* simd_transition_log = new simdpp::float64<4>[4]();
     for(std::size_t i = 0; i < 4; ++i) {
-        simd_transition_log10[i] = simdpp::load(transition_log10 + i * 4);
+        simd_transition_log[i] = simdpp::load(transition_log + i * 4);
     }
     
-    double* emission_log10 = new double[3*num_observation]();
+    double* emission_log = new double[3*num_observation]();
     for(std::size_t t = 0; t < num_observation; ++t) {
         for(std::size_t i = 0; i < 3; ++i) {
-            emission_log10[t*3 + i] = std::log10(emission_func_gaussion(emission, observations[t], i));
+            emission_log[t*3 + i] = std::log(emission_func_gaussion(emission, observations[t], i));
         }
     }
 
-    simdpp::float64<4>* simd_emission_log10 = new simdpp::float64<4>[num_observation]();
+    simdpp::float64<4>* simd_emission_log = new simdpp::float64<4>[num_observation]();
     for(std::size_t t = 0; t < num_observation; ++t) {
-        simd_emission_log10[t] = simdpp::load(emission_log10 + t*3);
+        simd_emission_log[t] = simdpp::load(emission_log + t*3);
     }
 
     // initialize viterbi
-    simdpp::float64<4> temp = simdpp::load(initial_log10);
-    temp = simdpp::add(temp, simd_emission_log10[0]);
+    simdpp::float64<4> temp = simdpp::load(initial_log);
+    temp = simdpp::add(temp, simd_emission_log[0]);
     simdpp::store(viterbi + 0, temp);
 
     // run viterbi
     for (std::size_t t = 1; t < num_observation; ++t) {
         for (std::size_t i = 0; i < 3; ++i) {   // current state
             simdpp::float64<4> temp = simdpp::load(viterbi + (t-1)*3);
-            temp = simdpp::add(temp, simd_transition_log10[i]);
+            temp = simdpp::add(temp, simd_transition_log[i]);
 
             double max = simdpp::reduce_max(temp);
-            viterbi[t * 3 + i] = max + std::log10(emission_func_gaussion(emission, observations[t], i));
+            viterbi[t * 3 + i] = max + std::log(emission_func_gaussion(emission, observations[t], i));
 
             double* result_arr = new double[4]();
             simdpp::store(result_arr, temp);
