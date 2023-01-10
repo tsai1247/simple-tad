@@ -69,15 +69,15 @@ static void BM_calculate_di_AVX2(benchmark::State& state) {
     state.counters["Throughput"] = benchmark::Counter(state.iterations() * edge_size * edge_size * sizeof(double) / 8, benchmark::Counter::kIsRate);
 }
 
-double* random_probability_list(std::size_t& size = 3)
+double* random_probability_list(std::size_t& size)
 {
     double* data = new double[size]();
     std::generate(data, data + size, []() { return static_cast<double>(rand()%1000) / static_cast<double>(rand()%1000) ; });
     double sum = 0;
-    for(int i=0; i<size; i++)
+    for(std::size_t i=0; i<size; i++)
         sum += data[i];
 
-    for(int i=0; i<size; i++)
+    for(std::size_t i=0; i<size; i++)
         data[i] /= sum;
     return data;
 }
@@ -88,32 +88,34 @@ static void BM_calculate_viterbi_SCALAR(benchmark::State& state) {
     int* observations = new int[edge_size]();
     std::generate(observations, observations + edge_size, []() { return static_cast<int>(rand()%3); });
     
+    std::size_t num_observations = edge_size;    
+    
     std::size_t num_hiddenstate = 3;
     
     double* initial = random_probability_list(num_hiddenstate);
     
     double* transition = new double[num_hiddenstate*num_hiddenstate]();
-    for(int i=0; i<num_hiddenstate; i++)
+    for(std::size_t i=0; i<num_hiddenstate; i++)
     {
         double* tmp = random_probability_list(num_hiddenstate);
-        for(int j=0; j<num_hiddenstate; j++)
+        for(std::size_t j=0; j<num_hiddenstate; j++)
             transition[i*3+j] = tmp[j];
     }
 
     std::size_t num_emission = 3;
-    double* transition = new double[num_hiddenstate*num_emission]();
-    for(int i=0; i<num_hiddenstate; i++)
+    double* emission = new double[num_hiddenstate*num_emission]();
+    for(std::size_t i=0; i<num_hiddenstate; i++)
     {
         double* tmp = random_probability_list(num_emission);
-        for(int j=0; j<num_emission; j++)
-            transition[i*num_emission+j] = tmp[j];
+        for(std::size_t j=0; j<num_emission; j++)
+            emission[i*num_emission+j] = tmp[j];
     }
 
     for (auto _ : state) {
-        scalar::viterbi(obserbaions, num_observation, initial, transition, emission, num_emission, num_hiddenstate);
+        scalar::viterbi(observations, num_observations, initial, transition, emission, num_emission, num_hiddenstate);
     }
 
-    state.counters["Throughput"] = benchmark::Counter(state.iterations() edge_size * sizeof(int) / 8, benchmark::Counter::kIsRate);
+    state.counters["Throughput"] = benchmark::Counter(state.iterations() * edge_size * sizeof(int) / 8, benchmark::Counter::kIsRate);
 }
 
 static void BM_calculate_viterbi_SIMD(benchmark::State& state) {
@@ -122,32 +124,34 @@ static void BM_calculate_viterbi_SIMD(benchmark::State& state) {
     int* observations = new int[edge_size]();
     std::generate(observations, observations + edge_size, []() { return static_cast<int>(rand()%3); });
     
+    std::size_t num_observations = edge_size;
+    
     std::size_t num_hiddenstate = 3;
     
     double* initial = random_probability_list(num_hiddenstate);
     
     double* transition = new double[num_hiddenstate*num_hiddenstate]();
-    for(int i=0; i<num_hiddenstate; i++)
+    for(std::size_t i=0; i<num_hiddenstate; i++)
     {
         double* tmp = random_probability_list(num_hiddenstate);
-        for(int j=0; j<num_hiddenstate; j++)
+        for(std::size_t j=0; j<num_hiddenstate; j++)
             transition[i*3+j] = tmp[j];
     }
 
     std::size_t num_emission = 3;
-    double* transition = new double[num_hiddenstate*num_emission]();
-    for(int i=0; i<num_hiddenstate; i++)
+    double* emission = new double[num_hiddenstate*num_emission]();
+    for(std::size_t i=0; i<num_hiddenstate; i++)
     {
         double* tmp = random_probability_list(num_emission);
-        for(int j=0; j<num_emission; j++)
-            transition[i*num_emission+j] = tmp[j];
+        for(std::size_t j=0; j<num_emission; j++)
+            emission[i*num_emission+j] = tmp[j];
     }
 
     for (auto _ : state) {
-        vectoriszed::viterbi(obserbaions, num_observation, initial, transition, emission, num_emission, num_hiddenstate);
+        vectorized::viterbi(observations, num_observations, initial, transition, emission, num_emission, num_hiddenstate);
     }
 
-    state.counters["Throughput"] = benchmark::Counter(state.iterations() edge_size * sizeof(int) / 8, benchmark::Counter::kIsRate);
+    state.counters["Throughput"] = benchmark::Counter(state.iterations() * edge_size * sizeof(int) / 8, benchmark::Counter::kIsRate);
 }
 
 BENCHMARK(BM_calculate_di_SCALAR)->Arg(33957);
