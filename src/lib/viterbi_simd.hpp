@@ -6,8 +6,8 @@
 
 namespace vectorized {
 
-double emission_func(const double* const& emission, const int& di, const int& state) {
-    return emission[state * 3 + di];
+double emission_func(const double* const& emission, const int& di, const int& state, const std::size_t& num_hiddenstate) {
+    return emission[state * num_hiddenstate + di];
 }
 
 /*
@@ -16,26 +16,26 @@ initial: double[3].  The probabilities for init state.
 transition: double[3*3].  The probabilities for transition.  transition[i*3+j] presents "from state i to state j".
 emission: double[3*2] now.  The (average, variance) pairs for gaussion emission function.
 */
-int* viterbi(const int* const& observations, const std::size_t& num_observation, const double* const& initial, const double* const& transition, const double* const& emission) {
+int* viterbi(const int* const& observations, const std::size_t& num_observation, const double* const& initial, const double* const& transition, const double* const& emission, const std::size_t& num_emission=3, const std::size_t& num_hiddenstate=3) {
     int* hidden_states = new int[num_observation]();
-    double* viterbi = new double[3* num_observation]();
+    double* viterbi = new double[num_hiddenstate* num_observation]();
 
-    int* prev_state = new int[3* num_observation]();
+    int* prev_state = new int[num_hiddenstate* num_observation]();
     
     double* initial_log = new double[4]();
-    for(std::size_t i = 0; i < 3; ++i) {
+    for(std::size_t i = 0; i < num_hiddenstate; ++i) {
         initial_log[i] = std::log(initial[i]);
     }
-    initial_log[3] = -1000;
+    initial_log[num_hiddenstate] = -1000;
 
-    double* transition_log = new double[4*4]();
-    for(std::size_t i = 0; i < 4*4; ++i) {
-        if ((i + 1) % 4 == 0 || i >= 12)
+    double* transition_log = new double[(num_hiddenstate+1)*(num_hiddenstate+1)]();
+    for(std::size_t i = 0; i < (num_hiddenstate+1)*(num_hiddenstate+1); ++i) {
+        if ((i + 1) % (num_hiddenstate+1) == 0 || i >= (num_hiddenstate+1) * num_hiddenstate)
             transition_log[i] = -1000;
         else
         {
-            int origin_i = i - i / 4;
-            origin_i = origin_i%3*3+origin_i/3;
+            int origin_i = i - i / (num_hiddenstate+1);
+            origin_i = origin_i%num_hiddenstate*num_hiddenstate+origin_i/num_hiddenstate;
             transition_log[i] = log(transition[origin_i]);
         }
     }
@@ -45,16 +45,16 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
         simd_transition_log[i] = simdpp::load(transition_log + i * 4);
     }
     
-    double* emission_log = new double[3*num_observation]();
+    double* emission_log = new double[num_hiddenstate*num_observation]();
     for(std::size_t t = 0; t < num_observation; ++t) {
-        for(std::size_t i = 0; i < 3; ++i) {
-            emission_log[t*3 + i] = std::log(emission_func(emission, observations[t], i));
+        for(std::size_t i = 0; i < num_hiddenstate; ++i) {
+            emission_log[t*num_hiddenstate + i] = std::log(emission_func(emission, observations[t], i, num_hiddenstate));
         }
     }
 
     simdpp::float64<4>* simd_emission_log = new simdpp::float64<4>[num_observation]();
     for(std::size_t t = 0; t < num_observation; ++t) {
-        simd_emission_log[t] = simdpp::load(emission_log + t*3);
+        simd_emission_log[t] = simdpp::load(emission_log + t*num_hiddenstate);
     }
 
     // initialize viterbi
@@ -64,20 +64,20 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
 
     // run viterbi
     for (std::size_t t = 1; t < num_observation; ++t) {
-        for (std::size_t i = 0; i < 3; ++i) {   // current state
-            simdpp::float64<4> temp = simdpp::load(viterbi + (t-1)*3);
+        for (std::size_t i = 0; i < num_hiddenstate; ++i) {   // current state
+            simdpp::float64<4> temp = simdpp::load(viterbi + (t-1)*num_hiddenstate);
             temp = simdpp::add(temp, simd_transition_log[i]);
 
             double max = simdpp::reduce_max(temp);
-            viterbi[t * 3 + i] = max + std::log(emission_func(emission, observations[t], i));
+            viterbi[t * num_hiddenstate + i] = max + std::log(emission_func(emission, observations[t], i, num_hiddenstate));
 
             double* result_arr = new double[4]();
             simdpp::store(result_arr, temp);
-            for(int j=0; j<3; j++)
+            for(std::size_t j=0; j<num_hiddenstate; j++)
             {
                 if(result_arr[j] == max)
                 {
-                    prev_state[t * 3 + i] = j;
+                    prev_state[t * num_hiddenstate + i] = j;
                     break;
                 }
             }
@@ -87,16 +87,16 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
 
     // find the most probable state
     double max = -INFINITY;
-    for (std::size_t i = 0; i < 3; ++i) {
-        if (viterbi[(num_observation-1) * 3 + i] > max) {
-            max = viterbi[(num_observation-1) * 3 + i];
+    for (std::size_t i = 0; i < num_hiddenstate; ++i) {
+        if (viterbi[(num_observation-1) * num_hiddenstate + i] > max) {
+            max = viterbi[(num_observation-1) * num_hiddenstate + i];
             hidden_states[num_observation - 1] = i;
         }
     }
 
     // backtrace
     for (int t = num_observation - 2; t >= 0; --t) {
-        hidden_states[t] = prev_state[(t + 1) * 3 + hidden_states[t + 1]];
+        hidden_states[t] = prev_state[(t + 1) * num_hiddenstate + hidden_states[t + 1]];
     }
 
     delete[] viterbi;
