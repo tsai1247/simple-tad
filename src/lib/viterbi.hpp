@@ -29,7 +29,6 @@ int* viterbi(const int* const& observations, const std::size_t& num_observation,
     // initialize viterbi
     for (std::size_t i = 0; i < 3; ++i) {
         viterbi[i * num_observation] = std::log(initial[i]) + std::log(emission_func(emission, observations[0], i));
-        prev_state[i * num_observation] = i;
     }
 
     // run viterbi

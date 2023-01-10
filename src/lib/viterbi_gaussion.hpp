@@ -39,7 +39,6 @@ int* viterbi_gaussion(const double* const& observations, const std::size_t& num_
     // initialize viterbi
     for (std::size_t i = 0; i < 3; ++i) {
         viterbi[i * num_observation] = std::log(initial[i]) + std::log(emission_func_gaussion(emission, observations[0], i));
-        prev_state[i * num_observation] = i;
     }
 
     // run viterbi
