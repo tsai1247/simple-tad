@@ -84,7 +84,7 @@ TEST(tests, viterbi_raw) {
          40,  50,  10,   2,  18,   1, -1.5,   4,   1, 0.5, 
          -1, -26
     };
-    auto sizeof_observation = 20;
+    auto sizeof_observation = 52;
 
     double start_p[3] = { 0.33, 0.33, 0.33 };
  
@@ -102,14 +102,20 @@ TEST(tests, viterbi_raw) {
 
     // call viterbi algorithm
     auto viterbi_result = scalar::viterbi(observation, sizeof_observation, start_p, transition_p, emission_p);
-
+    
     int expected_result[] = {
-        0, 1, 1, 0, 2, 2, 2, 2, 2, 1,
-        0, 0, 0, 0, 0, 0, 1, 1, 1, 1
+        0, 2, 2, 1, 2, 2, 1, 1, 1, 2, 
+        0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 
+        2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 
+        0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 
+        2, 1
     };
-    for (int i = 0; i < sizeof_observation; i++)
+    for (int i = 0; i < sizeof_observation; i++) {
+        // printf("%d ", viterbi_result[i]);
         EXPECT_EQ(viterbi_result[i], expected_result[i]);
-
+    }
+    printf("\n");
     delete[] viterbi_result;
 }
 
